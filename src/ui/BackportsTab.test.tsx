@@ -1,5 +1,6 @@
 import { render, screen } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
+import { makePr } from '../test/makePr';
 import type { BackportGroup, PrEntry, PrKey } from '../types';
 import { BackportsTab } from './BackportsTab';
 
@@ -9,6 +10,15 @@ function tracked(number: number) {
 
 function group(mainNumber: number, addedAt: string, overrides: Partial<BackportGroup> = {}): BackportGroup {
   return { main: tracked(mainNumber), slots: [], addedAt, archived: false, ...overrides };
+}
+
+function entryMap(...specs: Array<[number, 'OPEN' | 'CLOSED' | 'MERGED']>): Map<PrKey, PrEntry> {
+  const map = new Map<PrKey, PrEntry>();
+  for (const [number, lifecycle] of specs) {
+    const pr = makePr({ number, lifecycle });
+    map.set(pr.key, { status: 'ok', key: pr.key, tracked: tracked(number), pr });
+  }
+  return map;
 }
 
 function baseProps(overrides: Partial<Parameters<typeof BackportsTab>[0]> = {}) {
@@ -21,6 +31,7 @@ function baseProps(overrides: Partial<Parameters<typeof BackportsTab>[0]> = {}) 
     onAddVersion: vi.fn(),
     onRemoveVersion: vi.fn(),
     onFillSlot: vi.fn().mockReturnValue({ ok: true }),
+    onArchiveGroup: vi.fn(),
     ...overrides,
   };
 }
@@ -64,5 +75,57 @@ describe('BackportsTab', () => {
     const { default: userEvent } = await import('@testing-library/user-event');
     await userEvent.click(screen.getByRole('button', { name: /remove group/i }));
     expect(onRemoveGroup).toHaveBeenCalledWith('graylog2/graylog2-server#4821');
+  });
+});
+
+describe('BackportGroupArchiveSection via BackportsTab', () => {
+  it('keeps an archived group out of the active list', () => {
+    const groups = [
+      group(1, '2026-08-01T00:00:00Z'),
+      group(2, '2026-08-20T00:00:00Z', { archived: true }),
+    ];
+    render(<BackportsTab {...baseProps({ groups })} />);
+    expect(screen.getAllByTestId('backport-group-card')).toHaveLength(1);
+    expect(screen.getByTestId('backport-group-card')).toHaveTextContent('#1');
+  });
+
+  it('starts collapsed, showing a count but no cards', () => {
+    const groups = [group(9, '2026-08-01T00:00:00Z', { archived: true })];
+    render(<BackportsTab {...baseProps({ groups })} />);
+    const toggle = screen.getByRole('button', { name: /archive/i });
+    expect(toggle).toHaveAttribute('aria-expanded', 'false');
+    expect(toggle).toHaveTextContent('1');
+    expect(screen.queryByText('#9')).not.toBeInTheDocument();
+  });
+
+  it('reveals its cards when expanded, and hides them again', async () => {
+    const { default: userEvent } = await import('@testing-library/user-event');
+    const groups = [group(9, '2026-08-01T00:00:00Z', { archived: true })];
+    render(<BackportsTab {...baseProps({ groups })} />);
+    const toggle = screen.getByRole('button', { name: /archive/i });
+
+    await userEvent.click(toggle);
+    expect(toggle).toHaveAttribute('aria-expanded', 'true');
+    expect(screen.getByText('#9')).toBeInTheDocument();
+
+    await userEvent.click(toggle);
+    expect(screen.queryByText('#9')).not.toBeInTheDocument();
+  });
+
+  it('is not rendered at all when nothing is archived', () => {
+    render(<BackportsTab {...baseProps({ groups: [group(1, '2026-08-01T00:00:00Z')] })} />);
+    expect(screen.queryByRole('button', { name: /archive/i })).not.toBeInTheDocument();
+  });
+
+  it('routes onArchiveGroup with the right group key', async () => {
+    const { default: userEvent } = await import('@testing-library/user-event');
+    const onArchiveGroup = vi.fn();
+    const groups = [
+      group(4821, '2026-08-20T00:00:00Z', { slots: [{ version: '6.2', pr: tracked(4840) }] }),
+    ];
+    const entries = entryMap([4821, 'MERGED'], [4840, 'MERGED']);
+    render(<BackportsTab {...baseProps({ groups, entries, onArchiveGroup })} />);
+    await userEvent.click(screen.getByRole('button', { name: /^archive$/i }));
+    expect(onArchiveGroup).toHaveBeenCalledWith('graylog2/graylog2-server#4821');
   });
 });
