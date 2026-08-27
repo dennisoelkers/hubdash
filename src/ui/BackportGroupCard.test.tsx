@@ -52,6 +52,47 @@ describe('BackportGroupCard — display', () => {
     expect(screen.getByText('Graylog2/graylog2-server')).toBeInTheDocument();
   });
 
+  it('links the main PR number to GitHub', () => {
+    setup();
+    expect(screen.getByRole('link', { name: '#4821' })).toHaveAttribute(
+      'href',
+      'https://github.com/Graylog2/graylog2-server/pull/4821',
+    );
+  });
+
+  it('shows the author on the meta line once the main entry resolved', () => {
+    setup();
+    expect(screen.getByText('dennisoelkers')).toBeInTheDocument();
+    expect(screen.getByTestId('group-meta')).toHaveTextContent(
+      /^Graylog2\/graylog2-server · dennisoelkers · ✓ merged$/,
+    );
+  });
+
+  it('omits the author, and its separator, while the main entry is pending', () => {
+    setup({ entries: new Map<PrKey, PrEntry>() });
+    expect(screen.getByTestId('group-meta')).toHaveTextContent(
+      /^Graylog2\/graylog2-server · … pending$/,
+    );
+  });
+
+  it('omits the author when the main entry errored', () => {
+    const entries = new Map<PrKey, PrEntry>([
+      [
+        'graylog2/graylog2-server#4821',
+        {
+          status: 'error',
+          key: 'graylog2/graylog2-server#4821',
+          tracked: tracked(4821),
+          message: 'Could not resolve to a PullRequest.',
+        },
+      ],
+    ]);
+    setup({ entries });
+    expect(screen.getByTestId('group-meta')).toHaveTextContent(
+      /^Graylog2\/graylog2-server · Could not resolve to a PullRequest\.$/,
+    );
+  });
+
   it('shows the roll-up as N of M landed', () => {
     setup();
     expect(screen.getByText('1 of 2 landed')).toBeInTheDocument();

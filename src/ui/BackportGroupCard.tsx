@@ -45,9 +45,19 @@ const Header = styled.div`
   gap: ${tokens.space(2)};
 `;
 
-const NumberLabel = styled.span`
+/**
+ * Spec §10.2: every PR number in the app links to GitHub, and the main PR's own
+ * card was the one place with no way to reach it. Styled to match `SlotRow`'s
+ * equivalent link so the numbers on one card read as one thing.
+ */
+const NumberLink = styled.a`
   font-family: ${tokens.font.mono};
-  color: ${tokens.color.textMuted};
+  color: ${tokens.color.accent};
+  text-decoration: none;
+
+  &:hover {
+    text-decoration: underline;
+  }
 `;
 
 const Title = styled.span`
@@ -125,6 +135,9 @@ export function BackportGroupCard({
   const mainKey = `${group.main.owner}/${group.main.repo}`;
   const mainEntry = entries.get(prKey(group.main.owner, group.main.repo, group.main.number));
   const mainTitle = mainEntry?.status === 'ok' ? mainEntry.pr.title : '';
+  // Only known once the entry resolved. Rendered conditionally, separator and
+  // all, so a pending or errored main never leaves a dangling middot behind.
+  const mainAuthor = mainEntry?.status === 'ok' ? mainEntry.pr.author : null;
 
   const submitVersions = (event: React.FormEvent) => {
     event.preventDefault();
@@ -141,18 +154,26 @@ export function BackportGroupCard({
       data-flashed={groupKey(group) === flashedKey ? 'true' : 'false'}
     >
       <Header>
-        <NumberLabel>{`#${group.main.number}`}</NumberLabel>
+        <NumberLink
+          href={`https://github.com/${group.main.owner}/${group.main.repo}/pull/${group.main.number}`}
+          target="_blank"
+          rel="noreferrer noopener"
+        >
+          {`#${group.main.number}`}
+        </NumberLink>
         <Title>{mainTitle}</Title>
         <RollUp>{`${landed} of ${total} landed`}</RollUp>
         <RemoveGroup type="button" aria-label="Remove group" onClick={onRemoveGroup}>
           ✕
         </RemoveGroup>
       </Header>
-      <Meta>
+      <Meta data-testid="group-meta">
         {/* mainKey wrapped in its own element so it has an exact, matchable
             textContent — as a bare sibling text node next to MainStatus, no
             single element's textContent would equal just the repo string. */}
-        <span>{mainKey}</span> · <MainStatus>{mainLabel(prStateFor(group.main, entries))}</MainStatus>
+        <span>{mainKey}</span>
+        {mainAuthor === null ? null : <> · <span>{mainAuthor}</span></>} ·{' '}
+        <MainStatus>{mainLabel(prStateFor(group.main, entries))}</MainStatus>
       </Meta>
       {group.slots.map((slot) => (
         <SlotRow
