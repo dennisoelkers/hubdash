@@ -1,4 +1,4 @@
-import { render, screen, waitFor, within } from '@testing-library/react';
+import { act, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { TOKEN_KEY } from '../storage/token';
@@ -188,7 +188,7 @@ describe('App — the board', () => {
 });
 
 describe('App — failure handling', () => {
-  it('keeps the last good board and marks freshness stale on a network failure', async () => {
+  it('keeps the last good board on screen when a poll fails', async () => {
     const good = boardResponder({ pr0: prNode(4821) });
     const fetchImpl = vi
       .fn()
@@ -263,7 +263,12 @@ describe('App — failure handling', () => {
         getData: () => 'https://gitlab.com/a/b/pull/1',
       },
     });
-    document.dispatchEvent(event);
+    // Wrapped in act because the listener sets state synchronously. Task 12's
+    // equivalent test does the same; leaving it unwrapped emits a real act()
+    // warning, and this project treats warnings as signal rather than noise.
+    await act(async () => {
+      document.dispatchEvent(event);
+    });
 
     expect(await screen.findByTestId('banner')).toHaveTextContent(/github\.com/i);
   });
