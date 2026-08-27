@@ -1,7 +1,16 @@
 import type { ColumnId, PrEntry } from '../types';
 import { classify } from './classify';
 
-/** 0 sorts above 1 sorts above 2. Errors first, then normal, then drafts. */
+/**
+ * 0 sorts above 1 sorts above 2. Errors first, then normal, then drafts.
+ *
+ * Spec §7.3 asks for drafts-last only in Needs action, but the rank is applied
+ * board-wide because scoping it would cost a branch to buy nothing. Waiting and
+ * Ready cannot hold a draft at all — §6 sends every open draft to Needs action —
+ * so the only entry the wider rule can reach elsewhere is a CLOSED draft in
+ * Archive, and pinning an abandoned draft below the merged work it never became
+ * is the ordering one would have asked for anyway.
+ */
 function rank(entry: PrEntry): number {
   if (entry.status === 'error') return 0;
   return entry.pr.isDraft ? 2 : 1;

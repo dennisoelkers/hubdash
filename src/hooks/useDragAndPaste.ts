@@ -32,6 +32,12 @@ function isEditable(target: EventTarget | null): boolean {
  */
 export function useDragAndPaste(onText: (text: string) => void): { isDragging: boolean } {
   const [isDragging, setIsDragging] = useState(false);
+  // A depth counter, not a boolean. Dragging across the page fires a
+  // `dragleave` for the element being left paired with a `dragenter` for the
+  // one being entered, so a boolean set false on every leave would drop the
+  // overlay and put it straight back — a flicker on every child the pointer
+  // crosses. Counting enters against leaves means the overlay disappears only
+  // when the drag has actually left the window.
   const depth = useRef(0);
   const onTextRef = useRef(onText);
 

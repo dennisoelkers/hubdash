@@ -34,6 +34,14 @@ function asNumber(value: unknown, fallback: number): number {
   return typeof value === 'number' && Number.isFinite(value) ? value : fallback;
 }
 
+/**
+ * The `OPEN` fallback is defensive only, and in practice unreachable: GitHub's
+ * `PullRequestState` is non-null, so a value we do not recognise means the
+ * whole `pullRequest` selection came back null and the caller has already
+ * turned the entry into an errored one. Kept because the alternative is a
+ * throw, and this file's contract is that a surprising payload degrades a card
+ * rather than the board.
+ */
 function asLifecycle(value: unknown): PrLifecycle {
   return value === 'MERGED' || value === 'CLOSED' ? value : 'OPEN';
 }
