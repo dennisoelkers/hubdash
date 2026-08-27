@@ -11,6 +11,7 @@ import type {
   TrackedPr,
 } from '../types';
 import { aliasFor } from './buildQuery';
+import { asRecord } from './json';
 
 export type ParseResponseResult =
   | { ok: true; result: PollResult }
@@ -24,12 +25,6 @@ const FAILING_CONCLUSIONS = new Set([
   'ACTION_REQUIRED',
 ]);
 const FAILING_STATES = new Set(['FAILURE', 'ERROR']);
-
-function asRecord(value: unknown): Record<string, unknown> | null {
-  return typeof value === 'object' && value !== null && !Array.isArray(value)
-    ? (value as Record<string, unknown>)
-    : null;
-}
 
 function asString(value: unknown, fallback: string): string {
   return typeof value === 'string' ? value : fallback;

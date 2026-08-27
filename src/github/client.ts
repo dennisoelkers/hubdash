@@ -1,16 +1,11 @@
 import type { FetchOutcome, TrackedPr, TransportError } from '../types';
 import { buildQuery } from './buildQuery';
+import { asRecord } from './json';
 import { parseResponse } from './parseResponse';
 
 export const GITHUB_GRAPHQL_URL = 'https://api.github.com/graphql';
 
 export type FetchBoardOptions = { fetchImpl?: typeof fetch };
-
-function asRecord(value: unknown): Record<string, unknown> | null {
-  return typeof value === 'object' && value !== null && !Array.isArray(value)
-    ? (value as Record<string, unknown>)
-    : null;
-}
 
 function resetFromHeaders(headers: Headers): string | null {
   const raw = headers.get('x-ratelimit-reset');
