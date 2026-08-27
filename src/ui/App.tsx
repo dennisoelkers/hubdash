@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useLocation } from 'wouter';
 import { groupPrs } from '../domain/backports';
 import { formatAgo } from '../domain/formatAgo';
 import { prKey } from '../domain/prKey';
@@ -146,9 +147,19 @@ export function App({ deps = {} }: { deps?: AppDeps } = {}) {
   // that was stored but unreadable, since `storedToken.token` is already null
   // in that case too.
   const [settingsOpen, setSettingsOpen] = useState(() => storedToken.token === null);
-  const [activeTab, setActiveTab] = useState<TabId>('board');
+  const [location, navigate] = useLocation();
+  const activeTab: TabId = location === '/backports' ? 'backports' : 'board';
   const [backportDialogOpen, setBackportDialogOpen] = useState(false);
   const [tick, setTick] = useState(() => nowMs());
+
+  // Spec round 2 §3: the URL is the only source of truth for which tab shows.
+  // `/` and anything unrecognised settle on `/pulls`; `replace` so a redirect
+  // never leaves a dead entry in browser history.
+  useEffect(() => {
+    if (location !== '/pulls' && location !== '/backports') {
+      navigate('/pulls', { replace: true });
+    }
+  }, [location, navigate]);
 
   // Kept together so the timestamp can never drift from the error it dates.
   const reportTransportError = useCallback(
@@ -328,7 +339,7 @@ export function App({ deps = {} }: { deps?: AppDeps } = {}) {
         <>
           <TabBar
             active={activeTab}
-            onChange={setActiveTab}
+            onChange={(tab) => navigate(tab === 'board' ? '/pulls' : '/backports')}
             boardCount={prs.length}
             backportsCount={groups.length}
           />

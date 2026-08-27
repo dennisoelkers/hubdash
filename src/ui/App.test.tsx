@@ -106,6 +106,7 @@ const clock = () => '2026-08-27T12:00:00Z';
 
 beforeEach(() => {
   vi.restoreAllMocks();
+  window.history.pushState(null, '', '/pulls');
 });
 
 afterEach(() => {
@@ -739,5 +740,66 @@ describe('App — the Backports tab', () => {
 
     expect(await screen.findByText('#4821')).toBeInTheDocument();
     expect(screen.getByTestId('banner')).toHaveTextContent(/backport groups/i);
+  });
+});
+
+describe('App — routing', () => {
+  it('renders the Board tab for /pulls', async () => {
+    window.history.pushState(null, '', '/pulls');
+    const storage = fakeStorage({ [TOKEN_KEY]: storedToken });
+    render(<App deps={{ fetchImpl: vi.fn(), storage, clock, nowMs }} />);
+    expect(await screen.findByRole('tab', { name: /board/i })).toHaveAttribute('aria-selected', 'true');
+  });
+
+  it('renders the Backports tab for /backports', async () => {
+    window.history.pushState(null, '', '/backports');
+    const storage = fakeStorage({ [TOKEN_KEY]: storedToken });
+    render(<App deps={{ fetchImpl: vi.fn(), storage, clock, nowMs }} />);
+    expect(await screen.findByRole('tab', { name: /backports/i })).toHaveAttribute('aria-selected', 'true');
+  });
+
+  it('redirects / to /pulls', async () => {
+    window.history.pushState(null, '', '/');
+    const storage = fakeStorage({ [TOKEN_KEY]: storedToken });
+    render(<App deps={{ fetchImpl: vi.fn(), storage, clock, nowMs }} />);
+    await waitFor(() => expect(window.location.pathname).toBe('/pulls'));
+    expect(screen.getByRole('tab', { name: /board/i })).toHaveAttribute('aria-selected', 'true');
+  });
+
+  it('redirects an unknown path to /pulls', async () => {
+    window.history.pushState(null, '', '/nope');
+    const storage = fakeStorage({ [TOKEN_KEY]: storedToken });
+    render(<App deps={{ fetchImpl: vi.fn(), storage, clock, nowMs }} />);
+    await waitFor(() => expect(window.location.pathname).toBe('/pulls'));
+    expect(screen.getByRole('tab', { name: /board/i })).toHaveAttribute('aria-selected', 'true');
+  });
+
+  it('updates the URL when a tab is clicked', async () => {
+    const storage = fakeStorage({ [TOKEN_KEY]: storedToken });
+    render(<App deps={{ fetchImpl: vi.fn(), storage, clock, nowMs }} />);
+    await userEvent.click(await screen.findByRole('tab', { name: /backports/i }));
+    expect(window.location.pathname).toBe('/backports');
+    await userEvent.click(screen.getByRole('tab', { name: /board/i }));
+    expect(window.location.pathname).toBe('/pulls');
+  });
+
+  it('follows a browser back-navigation without a click', async () => {
+    window.history.pushState(null, '', '/pulls');
+    window.history.pushState(null, '', '/backports');
+    const storage = fakeStorage({ [TOKEN_KEY]: storedToken });
+    render(<App deps={{ fetchImpl: vi.fn(), storage, clock, nowMs }} />);
+    expect(await screen.findByRole('tab', { name: /backports/i })).toHaveAttribute('aria-selected', 'true');
+
+    window.history.back();
+
+    // Not `findByRole` + a single `toHaveAttribute`: jsdom dispatches `popstate`
+    // for `history.back()` via its own `setTimeout(fn, 0)` (see jsdom's
+    // SessionHistory#traverseHistory), a real macrotask. The Board tab element
+    // already exists in the DOM (just with the wrong `aria-selected`), so a
+    // one-shot `findByRole` resolves before that timer ever fires. `waitFor`
+    // polls on a real interval, which reliably outlasts it.
+    await waitFor(() =>
+      expect(screen.getByRole('tab', { name: /board/i })).toHaveAttribute('aria-selected', 'true'),
+    );
   });
 });
