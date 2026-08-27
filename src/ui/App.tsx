@@ -103,6 +103,7 @@ export function App({ deps = {} }: { deps?: AppDeps } = {}) {
     addVersion,
     removeVersion,
     fillSlot,
+    archiveGroup,
     storageError: backportStorageError,
     dismissStorageError: dismissBackportStorageError,
   } = useBackportGroups({ storage, clock });
@@ -369,6 +370,7 @@ export function App({ deps = {} }: { deps?: AppDeps } = {}) {
               onAddVersion={addVersion}
               onRemoveVersion={removeVersion}
               onFillSlot={fillSlot}
+              onArchiveGroup={archiveGroup}
             />
           )}
         </>

@@ -833,6 +833,53 @@ describe('App — the Backports tab', () => {
     expect(await screen.findByText('#4821')).toBeInTheDocument();
     expect(screen.getByTestId('banner')).toHaveTextContent(/backport groups/i);
   });
+
+  it('archives a fully-landed group into the collapsed Archive section', async () => {
+    // Only the slot's PR needs to be merged: `isComplete` excludes the main PR
+    // from its count (it's the thing being backported, not a backport), so
+    // leaving pr0 at its default OPEN state also keeps "merged" unambiguous —
+    // otherwise both the main and slot status lines would say "merged" and
+    // `findByText(/merged/i)` below would match two elements instead of one.
+    const fetchImpl = boardResponder({
+      pr0: prNode(4821),
+      pr1: prNode(4840, { state: 'MERGED' }),
+    });
+    const storage = fakeStorage({ [TOKEN_KEY]: storedToken });
+    render(<App deps={{ fetchImpl, storage, clock, nowMs }} />);
+
+    await userEvent.click(await screen.findByRole('tab', { name: /backports/i }));
+    await userEvent.click(screen.getByRole('button', { name: /track backports/i }));
+    await userEvent.type(
+      screen.getByLabelText(/main pull request/i),
+      'https://github.com/Graylog2/graylog2-server/pull/4821',
+    );
+    await userEvent.type(screen.getByLabelText(/backport to/i), '6.2');
+    await userEvent.click(screen.getByRole('button', { name: /^track$/i }));
+
+    const row = screen.getByTestId('slot-row');
+    const event = new Event('drop', { bubbles: true, cancelable: true });
+    Object.assign(event, {
+      dataTransfer: {
+        types: ['text/plain'],
+        getData: () => 'https://github.com/Graylog2/graylog2-server/pull/4840',
+      },
+    });
+    await act(async () => {
+      row.dispatchEvent(event);
+    });
+    await screen.findByText(/merged/i);
+
+    await userEvent.click(await screen.findByRole('button', { name: /^archive$/i }));
+
+    expect(screen.queryByTestId('backport-group-card')).not.toBeInTheDocument();
+    const toggle = screen.getByRole('button', { name: /archive/i });
+    expect(toggle).toHaveAttribute('aria-expanded', 'false');
+    await userEvent.click(toggle);
+    expect(screen.getByText('#4821')).toBeInTheDocument();
+
+    const stored = JSON.parse(storage.getItem(BACKPORT_GROUPS_KEY) ?? '');
+    expect(stored.groups[0].archived).toBe(true);
+  });
 });
 
 describe('App — routing', () => {
