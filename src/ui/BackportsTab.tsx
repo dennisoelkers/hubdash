@@ -10,6 +10,8 @@ export type BackportsTabProps = {
   groups: BackportGroup[];
   entries: Map<PrKey, PrEntry>;
   hasToken: boolean;
+  /** Forwarded to the cards; see `BackportGroupCard`'s own prop. */
+  flashedKey: PrKey | null;
   onRemoveGroup: (key: PrKey) => void;
   onAddVersion: (key: PrKey, version: string) => void;
   onRemoveVersion: (key: PrKey, version: string) => void;
@@ -27,6 +29,7 @@ export function BackportsTab({
   groups,
   entries,
   hasToken,
+  flashedKey,
   onRemoveGroup,
   onAddVersion,
   onRemoveVersion,
@@ -48,6 +51,7 @@ export function BackportsTab({
             key={key}
             group={group}
             entries={entries}
+            flashedKey={flashedKey}
             onRemoveGroup={() => onRemoveGroup(key)}
             onAddVersion={(version) => onAddVersion(key, version)}
             onRemoveVersion={(version) => onRemoveVersion(key, version)}

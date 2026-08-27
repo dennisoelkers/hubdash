@@ -76,6 +76,21 @@ describe('BackportGroupCard — display', () => {
     expect(screen.getByTestId('backport-group-card')).toHaveAttribute('data-complete', 'true');
   });
 
+  it('flashes when its own key is the flashed one', () => {
+    setup({ flashedKey: 'graylog2/graylog2-server#4821' });
+    expect(screen.getByTestId('backport-group-card')).toHaveAttribute('data-flashed', 'true');
+  });
+
+  it('does not flash for another group’s key', () => {
+    setup({ flashedKey: 'graylog2/graylog2-server#4790' });
+    expect(screen.getByTestId('backport-group-card')).toHaveAttribute('data-flashed', 'false');
+  });
+
+  it('does not flash when nothing is flashed', () => {
+    setup();
+    expect(screen.getByTestId('backport-group-card')).toHaveAttribute('data-flashed', 'false');
+  });
+
   it('does not dim an incomplete group', () => {
     setup();
     expect(screen.getByTestId('backport-group-card')).toHaveAttribute('data-complete', 'false');

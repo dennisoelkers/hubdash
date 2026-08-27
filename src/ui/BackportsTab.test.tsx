@@ -16,6 +16,7 @@ function baseProps(overrides: Partial<Parameters<typeof BackportsTab>[0]> = {}) 
     groups: [],
     entries: new Map<PrKey, PrEntry>(),
     hasToken: true,
+    flashedKey: null,
     onRemoveGroup: vi.fn(),
     onAddVersion: vi.fn(),
     onRemoveVersion: vi.fn(),
@@ -43,6 +44,18 @@ describe('BackportsTab', () => {
     // Both are zero-slot, so orderGroups falls back to addedAt descending.
     expect(cards[0]).toHaveTextContent('#2');
     expect(cards[1]).toHaveTextContent('#1');
+  });
+
+  it('flashes only the group whose key is flashed', () => {
+    const groups = [group(4821, '2026-08-01T00:00:00Z'), group(4790, '2026-08-20T00:00:00Z')];
+    render(
+      <BackportsTab {...baseProps({ groups, flashedKey: 'graylog2/graylog2-server#4821' })} />,
+    );
+    const flashed = screen
+      .getAllByTestId('backport-group-card')
+      .filter((card) => card.getAttribute('data-flashed') === 'true');
+    expect(flashed).toHaveLength(1);
+    expect(flashed[0]).toHaveTextContent('#4821');
   });
 
   it('routes onRemoveGroup with the right group key', async () => {

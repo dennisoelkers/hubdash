@@ -215,6 +215,18 @@ export function App({ deps = {} }: { deps?: AppDeps } = {}) {
     [add, flash],
   );
 
+  // Spec §10.5: a duplicate main PR flashes the existing card. Dropping the
+  // outcome on the floor here left the user's whole submission — versions
+  // included — discarded in silence.
+  const addGroupOrFlash = useCallback(
+    (main: Parameters<typeof addGroup>[0], versions: string[]) => {
+      const outcome = addGroup(main, versions);
+      if (!outcome.added) flash(outcome.key);
+      return outcome;
+    },
+    [addGroup, flash],
+  );
+
   const addFromText = useCallback(
     (text: string) => {
       // Spec §10.4: on the Backports tab a dropped link has to land in a
@@ -332,6 +344,7 @@ export function App({ deps = {} }: { deps?: AppDeps } = {}) {
               groups={groups}
               entries={entryMap}
               hasToken
+              flashedKey={flashedKey}
               onRemoveGroup={removeGroup}
               onAddVersion={addVersion}
               onRemoveVersion={removeVersion}
@@ -345,7 +358,7 @@ export function App({ deps = {} }: { deps?: AppDeps } = {}) {
       <AddBackportGroupDialog
         open={backportDialogOpen}
         onClose={() => setBackportDialogOpen(false)}
-        onAdd={(main, versions) => addGroup(main, versions)}
+        onAdd={addGroupOrFlash}
       />
       <SettingsDialog
         open={settingsOpen}

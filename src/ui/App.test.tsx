@@ -593,6 +593,33 @@ describe('App — the Backports tab', () => {
     expect(screen.getAllByText('Change number 4821')).toHaveLength(1);
   });
 
+  it('flashes the existing group instead of creating a second for the same main PR', async () => {
+    const fetchImpl = boardResponder({ pr0: prNode(4821) });
+    const storage = fakeStorage({ [TOKEN_KEY]: storedToken });
+    render(<App deps={{ fetchImpl, storage, clock, nowMs }} />);
+
+    await userEvent.click(await screen.findByRole('tab', { name: /backports/i }));
+    const trackTwice = async (versions: string) => {
+      await userEvent.click(screen.getByRole('button', { name: /track backports/i }));
+      await userEvent.type(
+        screen.getByLabelText(/main pull request/i),
+        'https://github.com/Graylog2/graylog2-server/pull/4821',
+      );
+      if (versions !== '') await userEvent.type(screen.getByLabelText(/backport to/i), versions);
+      await userEvent.click(screen.getByRole('button', { name: /^track$/i }));
+    };
+    await trackTwice('6.2');
+    expect(screen.getAllByTestId('backport-group-card')).toHaveLength(1);
+
+    // Spec §10.5: a duplicate main PR flashes the existing card. Silently
+    // discarding the whole submission tells the user nothing happened.
+    await trackTwice('6.1');
+    expect(screen.getAllByTestId('backport-group-card')).toHaveLength(1);
+    await waitFor(() =>
+      expect(screen.getByTestId('backport-group-card')).toHaveAttribute('data-flashed', 'true'),
+    );
+  });
+
   it('fills a slot by dropping a link on it and the card updates on the next poll', async () => {
     const fetchImpl = boardResponder({
       pr0: prNode(4821),

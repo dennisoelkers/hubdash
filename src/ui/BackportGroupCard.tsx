@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import styled from 'styled-components';
-import { isComplete, prStateFor, rollUpFor } from '../domain/backports';
+import { groupKey, isComplete, prStateFor, rollUpFor } from '../domain/backports';
 import { parseVersions } from '../domain/parseVersions';
 import { prKey } from '../domain/prKey';
 import type { ParsedPr } from '../github/parseUrl';
@@ -15,6 +15,11 @@ export type BackportGroupCardProps = {
   onAddVersion: (version: string) => void;
   onRemoveVersion: (version: string) => void;
   onFillSlot: (version: string, pr: ParsedPr) => { ok: true } | { ok: false; error: string };
+  /**
+   * The group to signal, if any. Spec §10.5: re-adding an already-tracked main
+   * PR flashes the existing card rather than creating a second one.
+   */
+  flashedKey?: PrKey | null;
 };
 
 const Card = styled.article`
@@ -27,6 +32,10 @@ const Card = styled.article`
 
   &[data-complete='true'] {
     opacity: 0.6;
+  }
+
+  &[data-flashed='true'] {
+    outline: 2px solid ${tokens.color.accent};
   }
 `;
 
@@ -109,6 +118,7 @@ export function BackportGroupCard({
   onAddVersion,
   onRemoveVersion,
   onFillSlot,
+  flashedKey = null,
 }: BackportGroupCardProps) {
   const [versionInput, setVersionInput] = useState('');
   const { landed, total } = rollUpFor(group, entries);
@@ -125,7 +135,11 @@ export function BackportGroupCard({
   };
 
   return (
-    <Card data-testid="backport-group-card" data-complete={isComplete(group, entries) ? 'true' : 'false'}>
+    <Card
+      data-testid="backport-group-card"
+      data-complete={isComplete(group, entries) ? 'true' : 'false'}
+      data-flashed={groupKey(group) === flashedKey ? 'true' : 'false'}
+    >
       <Header>
         <NumberLabel>{`#${group.main.number}`}</NumberLabel>
         <Title>{mainTitle}</Title>
