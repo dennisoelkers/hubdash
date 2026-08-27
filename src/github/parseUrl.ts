@@ -4,7 +4,10 @@ export type ParseResult =
   | { ok: true; value: ParsedPr }
   | { ok: false; error: string };
 
-const SHORTHAND = /^([^/\s]+)\/([^#\s]+)#(\d+)$/;
+// Owner excludes ':' so a URL scheme cannot match it; repo excludes '/' so a
+// path cannot. Without both, this matched entire URLs with a numeric fragment
+// and returned garbage owner/repo values with ok: true.
+const SHORTHAND = /^([^/\s:]+)\/([^/#\s]+)#(\d+)$/;
 
 function fail(error: string): ParseResult {
   return { ok: false, error };

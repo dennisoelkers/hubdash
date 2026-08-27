@@ -39,6 +39,14 @@ describe('parsePrUrl accepted forms', () => {
     ).toEqual(expected);
   });
 
+  it('parses a URL with a purely numeric fragment from its path, not as shorthand', () => {
+    // Regression: a looser shorthand regex matched this whole string and
+    // returned owner "https:" with a garbage repo instead of parsing the path.
+    expect(
+      expectOk('https://github.com/Graylog2/graylog2-server/pull/4821#12345'),
+    ).toEqual(expected);
+  });
+
   it('parses a URL with a query string', () => {
     expect(
       expectOk('https://github.com/Graylog2/graylog2-server/pull/4821?w=1'),
@@ -97,6 +105,10 @@ describe('parsePrUrl rejections', () => {
 
   it('rejects the repo#number shorthand without an owner', () => {
     expect(expectError('graylog2-server#4821')).toMatch(/owner/i);
+  });
+
+  it('rejects a path-like string that merely resembles owner/repo#number', () => {
+    expect(expectError('docs/superpowers/plans/hubdash.md#42')).toBeTruthy();
   });
 
   it('rejects arbitrary text', () => {
