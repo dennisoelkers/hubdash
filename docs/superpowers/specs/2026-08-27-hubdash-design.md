@@ -484,6 +484,13 @@ gone.
 - **`ArchiveSection` does not forward `flashedKey`.** Re-adding an already
   archived PR gives no feedback — no flash, no scroll — but only while the
   archive is expanded. Narrow, not unobservable.
+- **A flashed `BackportGroupCard` does not scroll into view**, unlike
+  `PrCard`, which flashes and scrolls. Re-adding an already-tracked main PR
+  flashes the existing group card, but if it is off-screen the user may not
+  see it happen. The same narrow gap as the `ArchiveSection` bullet above,
+  and deferred for the same reason: adding untested scroll behaviour during a
+  final review, with no further review wave to catch a mistake, was the
+  worse trade.
 - **`loadToken` reports a corrupt value without clearing it**, unlike
   `loadTrackedPrs`, which preserves the bad blob under `hubdash.prs.corrupt`
   and moves on. The token has no default to write, so the bad value survives
