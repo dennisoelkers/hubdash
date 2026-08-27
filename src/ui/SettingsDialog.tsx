@@ -163,6 +163,7 @@ export function SettingsDialog({
     }
     setLogin(outcome.login);
     onSave(token);
+    onClose();
   };
 
   return (

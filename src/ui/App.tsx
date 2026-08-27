@@ -142,7 +142,10 @@ export function App({ deps = {} }: { deps?: AppDeps } = {}) {
   const [inputError, setInputError] = useState<string | null>(null);
   const [flashedKey, setFlashedKey] = useState<PrKey | null>(null);
   const [addOpen, setAddOpen] = useState(false);
-  const [settingsOpen, setSettingsOpen] = useState(false);
+  // Opens on launch whenever there's no token to poll with — including one
+  // that was stored but unreadable, since `storedToken.token` is already null
+  // in that case too.
+  const [settingsOpen, setSettingsOpen] = useState(() => storedToken.token === null);
   const [activeTab, setActiveTab] = useState<TabId>('board');
   const [backportDialogOpen, setBackportDialogOpen] = useState(false);
   const [tick, setTick] = useState(() => nowMs());

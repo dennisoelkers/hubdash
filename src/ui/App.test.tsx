@@ -365,6 +365,34 @@ describe('App — failure handling', () => {
   });
 });
 
+describe('App — opening Settings automatically', () => {
+  it('opens Settings on launch when there is no stored token', async () => {
+    render(<App deps={{ fetchImpl: vi.fn(), storage: fakeStorage(), clock, nowMs }} />);
+    expect(await screen.findByRole('dialog', { name: /settings/i })).toBeInTheDocument();
+  });
+
+  it('does not open Settings on launch when a token is already stored', async () => {
+    const storage = fakeStorage({ [TOKEN_KEY]: storedToken });
+    render(<App deps={{ fetchImpl: vi.fn(), storage, clock, nowMs }} />);
+    await screen.findByText(/add a pull request/i);
+    expect(screen.queryByRole('dialog', { name: /settings/i })).not.toBeInTheDocument();
+  });
+
+  it('closes the auto-opened dialog after a token is saved, revealing the board', async () => {
+    const fetchImpl = boardResponder({ pr0: prNode(4821) });
+    const validate = vi.fn().mockResolvedValue({ ok: true, login: 'dennisoelkers' });
+    const storage = fakeStorage({ [TRACKED_PRS_KEY]: storedPrs(4821) });
+    render(<App deps={{ fetchImpl, storage, clock, nowMs, validate }} />);
+
+    expect(await screen.findByRole('dialog', { name: /settings/i })).toBeInTheDocument();
+    await userEvent.type(screen.getByLabelText(/personal access token/i), 'ghp_new');
+    await userEvent.click(screen.getByRole('button', { name: /^save$/i }));
+
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    expect(await screen.findByText('#4821')).toBeInTheDocument();
+  });
+});
+
 describe('App — the token', () => {
   it('reports an unreadable stored token and lets the warning be dismissed', async () => {
     // Global constraint: a malformed localStorage value is treated as absent

@@ -79,6 +79,26 @@ describe('SettingsDialog', () => {
     expect(onClose).toHaveBeenCalled();
   });
 
+  it('closes itself after a successful save', async () => {
+    const props = setup();
+    await userEvent.type(screen.getByLabelText(/personal access token/i), 'ghp_example');
+    await userEvent.click(screen.getByRole('button', { name: /save/i }));
+
+    await waitFor(() => expect(props.onSave).toHaveBeenCalledWith('ghp_example'));
+    expect(props.onClose).toHaveBeenCalled();
+  });
+
+  it('does not close itself when the token is rejected', async () => {
+    const props = setup({
+      validate: vi.fn().mockResolvedValue({ ok: false, error: 'GitHub rejected the token.' }),
+    });
+    await userEvent.type(screen.getByLabelText(/personal access token/i), 'nope');
+    await userEvent.click(screen.getByRole('button', { name: /save/i }));
+
+    expect(await screen.findByRole('alert')).toHaveTextContent(/rejected/i);
+    expect(props.onClose).not.toHaveBeenCalled();
+  });
+
   it('does not save when the dialog is dismissed while validation is in flight', async () => {
     // Regression: `submit` is an async closure and keeps running after the
     // dialog closes. Without a cancellation guard it called onSave anyway, so a
