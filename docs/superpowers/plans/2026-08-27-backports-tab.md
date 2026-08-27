@@ -2577,7 +2577,10 @@ export function BackportGroupCard({
         </RemoveGroup>
       </Header>
       <Meta>
-        {mainKey} · <MainStatus>{mainLabel(prStateFor(group.main, entries))}</MainStatus>
+        {/* mainKey wrapped in its own element so it has an exact, matchable
+            textContent — as a bare sibling text node next to MainStatus, no
+            single element's textContent would equal just the repo string. */}
+        <span>{mainKey}</span> · <MainStatus>{mainLabel(prStateFor(group.main, entries))}</MainStatus>
       </Meta>
       {group.slots.map((slot) => (
         <SlotRow
