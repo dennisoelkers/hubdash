@@ -222,25 +222,30 @@ describe('App — the board', () => {
       scrolled.push(this.textContent ?? '');
     };
 
-    const fetchImpl = boardResponder({ pr0: prNode(4821) });
-    const storage = fakeStorage({ [TOKEN_KEY]: storedToken, [TRACKED_PRS_KEY]: storedPrs(4821) });
-    render(<App deps={{ fetchImpl, storage, clock, nowMs }} />);
+    try {
+      const fetchImpl = boardResponder({ pr0: prNode(4821) });
+      const storage = fakeStorage({ [TOKEN_KEY]: storedToken, [TRACKED_PRS_KEY]: storedPrs(4821) });
+      render(<App deps={{ fetchImpl, storage, clock, nowMs }} />);
 
-    await screen.findByText('#4821');
-    await userEvent.click(screen.getByRole('button', { name: /add pr/i }));
-    await userEvent.type(
-      screen.getByLabelText(/pull request url/i),
-      'https://github.com/Graylog2/graylog2-server/pull/4821',
-    );
-    await userEvent.click(screen.getByRole('button', { name: /^add$/i }));
+      await screen.findByText('#4821');
+      await userEvent.click(screen.getByRole('button', { name: /add pr/i }));
+      await userEvent.type(
+        screen.getByLabelText(/pull request url/i),
+        'https://github.com/Graylog2/graylog2-server/pull/4821',
+      );
+      await userEvent.click(screen.getByRole('button', { name: /^add$/i }));
 
-    expect(screen.getAllByTestId('pr-card')).toHaveLength(1);
-    await waitFor(() =>
-      expect(screen.getByTestId('pr-card')).toHaveAttribute('data-flashed', 'true'),
-    );
-    expect(scrolled).toHaveLength(1);
-    expect(scrolled[0]).toContain('#4821');
-    delete proto.scrollIntoView;
+      expect(screen.getAllByTestId('pr-card')).toHaveLength(1);
+      await waitFor(() =>
+        expect(screen.getByTestId('pr-card')).toHaveAttribute('data-flashed', 'true'),
+      );
+      expect(scrolled).toHaveLength(1);
+      expect(scrolled[0]).toContain('#4821');
+    } finally {
+      // Never leave the prototype patched: a failure above would otherwise
+      // silently change what every later test in this file is running against.
+      delete proto.scrollIntoView;
+    }
   });
 });
 

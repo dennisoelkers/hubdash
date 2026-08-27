@@ -32,6 +32,16 @@ const FLASH_MS = 1500;
  */
 export const RATE_LIMIT_FALLBACK_MS = 60000;
 
+/**
+ * Module-level so its identity is stable, for the same reason useTrackedPrs
+ * hoists its default clock: inlined as a default parameter this would be a new
+ * function on every render, and App re-renders once a second to drive the
+ * freshness label. Everything downstream of `nowMs` — `poll`, the error
+ * reporter, the tick interval — would churn continuously, and the tick interval
+ * in particular would be torn down and restarted on every render.
+ */
+const defaultNowMs = () => Date.now();
+
 export type AppDeps = {
   fetchImpl?: typeof fetch;
   storage?: Storage | null;
@@ -84,7 +94,7 @@ const EMPTY_COLUMNS: Record<ColumnId, PrEntry[]> = {
 };
 
 export function App({ deps = {} }: { deps?: AppDeps } = {}) {
-  const { fetchImpl, storage, clock, nowMs = () => Date.now(), validate } = deps;
+  const { fetchImpl, storage, clock, nowMs = defaultNowMs, validate } = deps;
 
   const { prs, add, remove, storageError, dismissStorageError } = useTrackedPrs({ storage, clock });
 

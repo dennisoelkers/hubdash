@@ -81,6 +81,10 @@ function errorForBody(body: unknown, headers: Headers): TransportError | null {
 
   for (const item of envelope.errors) {
     const error = asRecord(item);
+    // Any `path` at all disqualifies it, not just the array shape parseResponse
+    // claims: an error with an odd path is at worst ignored here, which costs a
+    // card its specific message, whereas guessing wrong the other way costs the
+    // whole board.
     if (!error || error.path !== undefined) continue;
 
     if (error.type === 'RATE_LIMITED') {
