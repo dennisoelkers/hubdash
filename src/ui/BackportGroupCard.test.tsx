@@ -117,6 +117,23 @@ describe('BackportGroupCard — display', () => {
     expect(screen.getByTestId('backport-group-card')).toHaveAttribute('data-complete', 'true');
   });
 
+  it('marks a fully-landed group green, on top of the existing dim', () => {
+    setup({
+      group: group({ slots: [{ version: '6.2', pr: tracked(4840) }] }),
+      entries: entryMap([4821, 'MERGED'], [4840, 'MERGED']),
+    });
+    const card = screen.getByTestId('backport-group-card');
+    expect(card).toHaveAttribute('data-complete', 'true');
+    expect(card).toHaveStyle({ borderLeft: '2px solid #3fb950' });
+    expect(card).toHaveStyle({ background: '#3fb9501a' });
+  });
+
+  it('does not mark an incomplete group green', () => {
+    setup();
+    const card = screen.getByTestId('backport-group-card');
+    expect(card).not.toHaveStyle({ borderLeft: '2px solid #3fb950' });
+  });
+
   it('flashes when its own key is the flashed one', () => {
     setup({ flashedKey: 'graylog2/graylog2-server#4821' });
     expect(screen.getByTestId('backport-group-card')).toHaveAttribute('data-flashed', 'true');

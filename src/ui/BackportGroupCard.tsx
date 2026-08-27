@@ -26,12 +26,15 @@ const Card = styled.article`
   padding: ${tokens.space(3)} ${tokens.space(4)};
   background: ${tokens.color.surface};
   border: 1px solid ${tokens.color.border};
+  border-left: 2px solid transparent;
   border-radius: ${tokens.radius};
   font-family: ${tokens.font.body};
   color: ${tokens.color.text};
 
   &[data-complete='true'] {
     opacity: 0.6;
+    border-left: 2px solid ${tokens.color.good};
+    background: ${tokens.color.good}1a;
   }
 
   &[data-flashed='true'] {
