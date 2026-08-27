@@ -73,6 +73,22 @@ describe('Board', () => {
     expect(screen.queryByTestId('draft-divider')).not.toBeInTheDocument();
   });
 
+  it('draws no divider when every entry in needs action is a draft', () => {
+    // Covers the `> 0` half of the divider condition: an all-drafts column has
+    // its first draft at index 0, and a divider above the very first card would
+    // be meaningless. Not an exotic state — it is any user whose open work is
+    // all WIP branches.
+    const columns = groupIntoColumns([
+      entry({ number: 1, isDraft: true }),
+      entry({ number: 2, isDraft: true }),
+    ]);
+    render(<Board columns={columns} onRemove={() => {}} />);
+    expect(
+      within(screen.getByTestId('column-needsAction')).getAllByTestId('pr-card'),
+    ).toHaveLength(2);
+    expect(screen.queryByTestId('draft-divider')).not.toBeInTheDocument();
+  });
+
   it('passes the remove callback through to cards', async () => {
     const onRemove = vi.fn();
     const columns = groupIntoColumns([entry({ number: 4821 })]);
@@ -90,7 +106,9 @@ describe('Board', () => {
       (card) => card.getAttribute('data-flashed') === 'true',
     );
     expect(flashed).toHaveLength(1);
-    expect(within(flashed[0] as HTMLElement).getByText('#2')).toBeInTheDocument();
+    const [flashedCard] = flashed;
+    if (!flashedCard) throw new Error('expected exactly one flashed card');
+    expect(within(flashedCard).getByText('#2')).toBeInTheDocument();
   });
 });
 
