@@ -133,10 +133,17 @@ needed.**
 | Condition | Slot state |
 | --- | --- |
 | `slot.pr` is `null` | `empty` |
+| a PR is set but no poll has returned for it yet | `pending` |
 | the PR did not resolve | `errored`, carrying GitHub's message |
 | `lifecycle` is `MERGED` | `merged` |
 | `lifecycle` is `CLOSED` | `closed` |
 | `lifecycle` is `OPEN` | `open` |
+
+`pending` exists because a slot filled a moment ago has no status until the next
+poll returns, and the honest answer for that window is "not known yet" rather
+than a guess. Showing `open` would be a false claim about a PR that may already
+be merged. This mirrors v1 §4, where the board is briefly empty after a reload
+for the same reason.
 
 `closed` is deliberately distinct from `open`. A backport closed without merging
 means someone abandoned it, and collapsing the two would let exactly the failure
