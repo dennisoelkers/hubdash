@@ -102,3 +102,36 @@ export type TransportError =
 export type FetchOutcome =
   | { ok: true; result: PollResult }
   | { ok: false; error: TransportError };
+
+/** One target version of a backport group, and the PR filling it (if any). */
+export type BackportSlot = {
+  /** Free-text version label exactly as the user typed it, e.g. "6.2". */
+  version: string;
+  /** The backport PR filling this slot, or null while the slot is empty. */
+  pr: TrackedPr | null;
+};
+
+/**
+ * A change and everywhere it still has to land. Identified by its main PR's
+ * `prKey` — there is no generated id, so identity follows the codebase's one
+ * canonical key format and duplicate detection comes for free.
+ */
+export type BackportGroup = {
+  main: TrackedPr;
+  slots: BackportSlot[];
+  /** ISO 8601, when the group was created. */
+  addedAt: string;
+};
+
+/**
+ * Merge status of one slot. This tab tracks nothing else — no CI, no review.
+ * `pending` means a PR is set but no poll has returned for it yet; claiming
+ * `open` there would assert something we do not know.
+ */
+export type SlotState =
+  | { kind: 'empty' }
+  | { kind: 'pending' }
+  | { kind: 'errored'; message: string }
+  | { kind: 'open' }
+  | { kind: 'merged' }
+  | { kind: 'closed' };
