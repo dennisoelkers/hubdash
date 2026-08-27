@@ -28,9 +28,10 @@ const group: BackportGroup = {
     { version: '6.1', pr: null },
   ],
   addedAt: '2026-08-20T00:00:00Z',
+  archived: false,
 };
 
-function stored(groups: unknown, version: unknown = 1): Record<string, string> {
+function stored(groups: unknown, version: unknown = 2): Record<string, string> {
   return { [BACKPORT_GROUPS_KEY]: JSON.stringify({ version, groups }) };
 }
 
@@ -105,6 +106,32 @@ describe('loadBackportGroups', () => {
   it('never throws when storage is unavailable', () => {
     expect(loadBackportGroups(null)).toEqual({ groups: [], error: null });
   });
+
+  it('migrates a version-1 payload, defaulting archived to false on every group', () => {
+    const legacyGroup = {
+      main: group.main,
+      slots: group.slots,
+      addedAt: group.addedAt,
+    };
+    const storage = fakeStorage(stored([legacyGroup], 1));
+    expect(loadBackportGroups(storage)).toEqual({ groups: [{ ...legacyGroup, archived: false }], error: null });
+  });
+
+  it('round-trips a version-2 group whose archived is true', () => {
+    const storage = fakeStorage();
+    saveBackportGroups([{ ...group, archived: true }], storage);
+    expect(loadBackportGroups(storage)).toEqual({ groups: [{ ...group, archived: true }], error: null });
+  });
+
+  it('rejects a version-2 group missing archived', () => {
+    const bad = { main: group.main, slots: group.slots, addedAt: group.addedAt };
+    expect(loadBackportGroups(fakeStorage(stored([bad], 2))).error).toBeTruthy();
+  });
+
+  it('rejects a version below 1 or above 2', () => {
+    expect(loadBackportGroups(fakeStorage(stored([group], 0))).error).toMatch(/version/i);
+    expect(loadBackportGroups(fakeStorage(stored([group], 3))).error).toMatch(/version/i);
+  });
 });
 
 describe('saveBackportGroups', () => {
@@ -112,7 +139,7 @@ describe('saveBackportGroups', () => {
     const storage = fakeStorage();
     saveBackportGroups([group], storage);
     expect(JSON.parse(storage.getItem(BACKPORT_GROUPS_KEY) ?? '')).toEqual({
-      version: 1,
+      version: 2,
       groups: [group],
     });
   });

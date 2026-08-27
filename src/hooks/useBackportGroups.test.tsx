@@ -45,6 +45,7 @@ describe('useBackportGroups — creating and removing groups', () => {
           { version: '6.1', pr: null },
         ],
         addedAt: '2026-08-27T12:00:00Z',
+        archived: false,
       },
     ]);
   });

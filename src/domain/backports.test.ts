@@ -39,6 +39,7 @@ function group(overrides: Partial<BackportGroup> = {}): BackportGroup {
     main: tracked(4821),
     slots: [slot('6.2', 4840), slot('6.1', 4841), slot('6.0', null)],
     addedAt: '2026-08-20T00:00:00Z',
+    archived: false,
     ...overrides,
   };
 }
@@ -146,7 +147,7 @@ describe('isComplete', () => {
 
 describe('orderGroups', () => {
   function named(mainNumber: number, addedAt: string, slots: BackportSlot[]): BackportGroup {
-    return { main: tracked(mainNumber), slots, addedAt };
+    return { main: tracked(mainNumber), slots, addedAt, archived: false };
   }
 
   it('puts incomplete groups before complete ones', () => {

@@ -5,7 +5,7 @@ import { isTrackedPr } from './trackedPrs';
 export const BACKPORT_GROUPS_KEY = 'hubdash.backports';
 export const CORRUPT_BACKPORT_GROUPS_KEY = 'hubdash.backports.corrupt';
 
-const VERSION = 1;
+const CURRENT_VERSION = 2;
 
 export type LoadBackportGroupsResult = { groups: BackportGroup[]; error: string | null };
 
@@ -18,7 +18,7 @@ function isSlot(value: unknown): value is BackportSlot {
   return candidate.pr === null || isTrackedPr(candidate.pr);
 }
 
-function isGroup(value: unknown): value is BackportGroup {
+function isLegacyGroup(value: unknown): value is Omit<BackportGroup, 'archived'> {
   if (typeof value !== 'object' || value === null) return false;
   const candidate = value as Record<string, unknown>;
   return (
@@ -28,6 +28,10 @@ function isGroup(value: unknown): value is BackportGroup {
     typeof candidate.addedAt === 'string' &&
     candidate.addedAt !== ''
   );
+}
+
+function isGroup(value: unknown): value is BackportGroup {
+  return isLegacyGroup(value) && typeof (value as Record<string, unknown>).archived === 'boolean';
 }
 
 function reject(
@@ -59,9 +63,22 @@ export function loadBackportGroups(storage?: Storage | null): LoadBackportGroups
   // A missing version is a wrong shape, not an unsupported version — saying
   // otherwise would send someone hunting for a migration that never existed.
   if (!('version' in envelope)) return reject(storage, raw, UNREADABLE);
-  if (envelope.version !== VERSION) {
+  if (envelope.version !== 1 && envelope.version !== CURRENT_VERSION) {
     return reject(storage, raw, 'Your backport groups use an unsupported version and were reset.');
   }
+
+  // A version-1 payload predates `archived`; every group it names gets the
+  // only correct default for something that already exists — `false`.
+  if (envelope.version === 1) {
+    if (!Array.isArray(envelope.groups) || !envelope.groups.every(isLegacyGroup)) {
+      return reject(storage, raw, UNREADABLE);
+    }
+    return {
+      groups: envelope.groups.map((group) => ({ ...group, archived: false })),
+      error: null,
+    };
+  }
+
   if (!Array.isArray(envelope.groups) || !envelope.groups.every(isGroup)) {
     return reject(storage, raw, UNREADABLE);
   }
@@ -73,5 +90,5 @@ export function saveBackportGroups(
   groups: BackportGroup[],
   storage?: Storage | null,
 ): void {
-  writeKey(storage, BACKPORT_GROUPS_KEY, JSON.stringify({ version: VERSION, groups }));
+  writeKey(storage, BACKPORT_GROUPS_KEY, JSON.stringify({ version: CURRENT_VERSION, groups }));
 }

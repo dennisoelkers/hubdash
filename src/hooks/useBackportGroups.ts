@@ -107,6 +107,7 @@ export function useBackportGroups(
           main: { ...main, addedAt },
           slots: versions.map((version) => ({ version, pr: null })),
           addedAt,
+          archived: false,
         },
       ]);
       return { added: true, key };

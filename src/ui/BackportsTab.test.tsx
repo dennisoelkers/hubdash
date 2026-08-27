@@ -7,8 +7,8 @@ function tracked(number: number) {
   return { owner: 'Graylog2', repo: 'graylog2-server', number, addedAt: '2026-08-01T00:00:00Z' };
 }
 
-function group(mainNumber: number, addedAt: string): BackportGroup {
-  return { main: tracked(mainNumber), slots: [], addedAt };
+function group(mainNumber: number, addedAt: string, overrides: Partial<BackportGroup> = {}): BackportGroup {
+  return { main: tracked(mainNumber), slots: [], addedAt, archived: false, ...overrides };
 }
 
 function baseProps(overrides: Partial<Parameters<typeof BackportsTab>[0]> = {}) {

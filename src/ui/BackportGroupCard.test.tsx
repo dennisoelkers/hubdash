@@ -26,6 +26,7 @@ function group(overrides: Partial<BackportGroup> = {}): BackportGroup {
       { version: '6.1', pr: null },
     ],
     addedAt: '2026-08-20T00:00:00Z',
+    archived: false,
     ...overrides,
   };
 }

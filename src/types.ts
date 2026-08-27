@@ -121,6 +121,8 @@ export type BackportGroup = {
   slots: BackportSlot[];
   /** ISO 8601, when the group was created. */
   addedAt: string;
+  /** Set only by the user's own Archive action; never implied by isComplete. */
+  archived: boolean;
 };
 
 /**
