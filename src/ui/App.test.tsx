@@ -1,9 +1,9 @@
 import { act, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { TOKEN_KEY } from '../storage/token';
 import { TRACKED_PRS_KEY } from '../storage/trackedPrs';
-import { App } from './App';
+import { App, POLL_INTERVAL_MS, RATE_LIMIT_FALLBACK_MS } from './App';
 
 function fakeStorage(initial: Record<string, string> = {}): Storage {
   const map = new Map(Object.entries(initial));
@@ -78,6 +78,18 @@ const clock = () => '2026-08-27T12:00:00Z';
 beforeEach(() => {
   vi.restoreAllMocks();
 });
+
+afterEach(() => {
+  vi.useRealTimers();
+});
+
+function jsonReply(body: unknown, init: ResponseInit = {}) {
+  return new Response(JSON.stringify(body), {
+    status: 200,
+    headers: { 'content-type': 'application/json' },
+    ...init,
+  });
+}
 
 describe('App — first run', () => {
   it('asks for a token when none is stored, and does not call GitHub', async () => {
@@ -305,5 +317,159 @@ describe('App — failure handling', () => {
     });
 
     expect(await screen.findByTestId('banner')).toHaveTextContent(/github\.com/i);
+  });
+});
+
+describe('App — the token', () => {
+  it('reports an unreadable stored token and lets the warning be dismissed', async () => {
+    // Global constraint: a malformed localStorage value is treated as absent
+    // AND reported once. Silently falling back to "add a token" leaves the user
+    // guessing why the token they entered yesterday is gone.
+    const fetchImpl = vi.fn();
+    const storage = fakeStorage({ [TOKEN_KEY]: 'not json{', [TRACKED_PRS_KEY]: storedPrs(4821) });
+    render(<App deps={{ fetchImpl, storage, clock, nowMs }} />);
+
+    const banner = await screen.findByTestId('banner');
+    expect(banner).toHaveTextContent(/saved token could not be read/i);
+    expect(screen.getByText(/add a github token/i)).toBeInTheDocument();
+    expect(fetchImpl).not.toHaveBeenCalled();
+
+    await userEvent.click(within(banner).getByRole('button', { name: /dismiss/i }));
+    expect(screen.queryByTestId('banner')).not.toBeInTheDocument();
+  });
+
+  it('starts polling once a token is saved through the settings dialog', async () => {
+    const fetchImpl = boardResponder({ pr0: prNode(4821) });
+    const validate = vi.fn().mockResolvedValue({ ok: true, login: 'dennisoelkers' });
+    const storage = fakeStorage({ [TRACKED_PRS_KEY]: storedPrs(4821) });
+    render(<App deps={{ fetchImpl, storage, clock, nowMs, validate }} />);
+
+    expect(await screen.findByText(/add a github token/i)).toBeInTheDocument();
+    expect(fetchImpl).not.toHaveBeenCalled();
+
+    await userEvent.click(screen.getByRole('button', { name: /settings/i }));
+    await userEvent.type(screen.getByLabelText(/personal access token/i), 'ghp_new');
+    await userEvent.click(screen.getByRole('button', { name: /^save$/i }));
+
+    expect(validate).toHaveBeenCalledWith('ghp_new');
+    expect(await screen.findByText('#4821')).toBeInTheDocument();
+    expect(JSON.parse(storage.getItem(TOKEN_KEY) ?? '').token).toBe('ghp_new');
+  });
+
+  it('clears a rejected-token banner and resumes polling when a new token is saved', async () => {
+    const fetchImpl = vi
+      .fn()
+      .mockImplementationOnce(async () => jsonReply({ message: 'Bad credentials' }, { status: 401 }))
+      .mockImplementation(boardResponder({ pr0: prNode(4821) }));
+    const validate = vi.fn().mockResolvedValue({ ok: true, login: 'dennisoelkers' });
+    const storage = fakeStorage({ [TOKEN_KEY]: storedToken, [TRACKED_PRS_KEY]: storedPrs(4821) });
+    render(<App deps={{ fetchImpl, storage, clock, nowMs, validate }} />);
+
+    expect(await screen.findByTestId('banner')).toHaveTextContent(/token/i);
+
+    await userEvent.click(screen.getByRole('button', { name: /settings/i }));
+    await userEvent.type(screen.getByLabelText(/personal access token/i), 'ghp_fresh');
+    await userEvent.click(screen.getByRole('button', { name: /^save$/i }));
+
+    expect(await screen.findByText('#4821')).toBeInTheDocument();
+    expect(screen.queryByTestId('banner')).not.toBeInTheDocument();
+  });
+});
+
+describe('App — freshness and the rate-limit backoff', () => {
+  it('marks the freshness label stale only once two poll intervals have passed', async () => {
+    // `shouldAdvanceTime` is required, not decorative: Testing Library only
+    // recognises Jest's fake timers, so under plain vi.useFakeTimers() its
+    // waitFor polls with a setInterval that is itself frozen and never returns.
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    let now = Date.parse('2026-08-27T12:00:00Z');
+    const fetchImpl = boardResponder({ pr0: prNode(4821) });
+    const storage = fakeStorage({ [TOKEN_KEY]: storedToken, [TRACKED_PRS_KEY]: storedPrs(4821) });
+    render(<App deps={{ fetchImpl, storage, clock, nowMs: () => now }} />);
+
+    await waitFor(() => expect(screen.getByTestId('freshness')).toHaveTextContent(/updated/));
+    expect(screen.getByTestId('freshness')).toHaveAttribute('data-stale', 'false');
+
+    // Exactly two intervals is still fresh — the threshold is strictly greater.
+    now += POLL_INTERVAL_MS * 2;
+    await act(async () => {
+      vi.advanceTimersByTime(1000);
+    });
+    expect(screen.getByTestId('freshness')).toHaveAttribute('data-stale', 'false');
+
+    // One second past it, and the label turns amber.
+    now += 1000;
+    await act(async () => {
+      vi.advanceTimersByTime(1000);
+    });
+    expect(screen.getByTestId('freshness')).toHaveAttribute('data-stale', 'true');
+  });
+
+  it('names the reset time in the banner and resumes polling once it has passed', async () => {
+    // `shouldAdvanceTime` is required, not decorative: Testing Library only
+    // recognises Jest's fake timers, so under plain vi.useFakeTimers() its
+    // waitFor polls with a setInterval that is itself frozen and never returns.
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    const resetAt = '2026-08-27T12:00:20.000Z';
+    let now = Date.parse('2026-08-27T12:00:00Z');
+    const fetchImpl = vi
+      .fn()
+      .mockImplementationOnce(async () =>
+        jsonReply(
+          { errors: [{ type: 'RATE_LIMITED', message: 'API rate limit exceeded' }] },
+          { headers: {
+            'content-type': 'application/json',
+            'x-ratelimit-reset': String(Date.parse(resetAt) / 1000),
+          } },
+        ),
+      )
+      .mockImplementation(boardResponder({ pr0: prNode(4821) }));
+    const storage = fakeStorage({ [TOKEN_KEY]: storedToken, [TRACKED_PRS_KEY]: storedPrs(4821) });
+    render(<App deps={{ fetchImpl, storage, clock, nowMs: () => now }} />);
+
+    // Spec §9: the banner names the reset time.
+    const banner = await screen.findByTestId('banner');
+    expect(banner).toHaveTextContent(
+      `Polling resumes at ${new Date(resetAt).toLocaleTimeString()}.`,
+    );
+    expect(fetchImpl).toHaveBeenCalledTimes(1);
+
+    // Backed off: ticks while the limit stands cost nothing.
+    await act(async () => {
+      vi.advanceTimersByTime(POLL_INTERVAL_MS);
+    });
+    expect(fetchImpl).toHaveBeenCalledTimes(1);
+
+    now = Date.parse(resetAt) + 1000;
+    await act(async () => {
+      vi.advanceTimersByTime(1000);
+    });
+    expect(await screen.findByText('#4821')).toBeInTheDocument();
+  });
+
+  it('recovers from a rate limit whose reset time GitHub never reported', async () => {
+    // The dangerous shape: with resetAt null the backoff condition used to be
+    // unconditionally true, so canPoll never came back and Refresh was a no-op
+    // until the page was reloaded.
+    // `shouldAdvanceTime` is required, not decorative: Testing Library only
+    // recognises Jest's fake timers, so under plain vi.useFakeTimers() its
+    // waitFor polls with a setInterval that is itself frozen and never returns.
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    let now = Date.parse('2026-08-27T12:00:00Z');
+    const fetchImpl = vi
+      .fn()
+      .mockImplementationOnce(async () => jsonReply({}, { status: 429 }))
+      .mockImplementation(boardResponder({ pr0: prNode(4821) }));
+    const storage = fakeStorage({ [TOKEN_KEY]: storedToken, [TRACKED_PRS_KEY]: storedPrs(4821) });
+    render(<App deps={{ fetchImpl, storage, clock, nowMs: () => now }} />);
+
+    expect(await screen.findByTestId('banner')).toHaveTextContent('Polling resumes shortly.');
+    expect(fetchImpl).toHaveBeenCalledTimes(1);
+
+    now += RATE_LIMIT_FALLBACK_MS + 1000;
+    await act(async () => {
+      vi.advanceTimersByTime(1000);
+    });
+    expect(await screen.findByText('#4821')).toBeInTheDocument();
   });
 });
