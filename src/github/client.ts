@@ -7,11 +7,17 @@ export const GITHUB_GRAPHQL_URL = 'https://api.github.com/graphql';
 
 export type FetchBoardOptions = { fetchImpl?: typeof fetch };
 
+/** The largest value `new Date(ms)` represents; beyond it `toISOString` throws a RangeError. */
+const MAX_TIME_MS = 8.64e15;
+
 function resetFromHeaders(headers: Headers): string | null {
   const raw = headers.get('x-ratelimit-reset');
   if (raw === null) return null;
-  const seconds = Number.parseInt(raw, 10);
-  return Number.isFinite(seconds) ? new Date(seconds * 1000).toISOString() : null;
+  const ms = Number.parseInt(raw, 10) * 1000;
+  // The range check is load-bearing, not defensive dressing: this runs outside
+  // the try that wraps the fetch, so a RangeError here would reject straight
+  // out of fetchBoard and into a React render.
+  return Number.isFinite(ms) && Math.abs(ms) <= MAX_TIME_MS ? new Date(ms).toISOString() : null;
 }
 
 /**
@@ -52,22 +58,47 @@ function errorForStatus(response: Response): TransportError | null {
   };
 }
 
-/** GraphQL can report failure inside a 200 response, so the body needs checking too. */
-function errorForBody(body: unknown): TransportError | null {
+/**
+ * GraphQL can report failure inside a 200 response, so the body needs checking
+ * too — but only failures of the request AS A WHOLE belong here.
+ *
+ * A GraphQL `errors[]` mixes two very different things: request-level errors,
+ * which have no `path`, and per-alias errors, which name the field that failed.
+ * Only the former may fail the whole poll. `parseResponse` already owns the
+ * latter, turning each into an errored entry beside its healthy neighbours
+ * (spec §9). Reacting to a per-alias error here would discard good data for
+ * every other PR and raise a non-dismissable banner about a token that is fine
+ * — GitHub's message for an org with an IP allow list opens with "Although you
+ * appear to have the correct authorization credentials…", which is exactly the
+ * prose an auth heuristic goes looking for.
+ *
+ * `type` is therefore preferred over the message: the wording is GitHub's to
+ * change, the error type is part of the contract.
+ */
+function errorForBody(body: unknown, headers: Headers): TransportError | null {
   const envelope = asRecord(body);
   if (!envelope || !Array.isArray(envelope.errors)) return null;
 
   for (const item of envelope.errors) {
     const error = asRecord(item);
-    if (!error) continue;
+    if (!error || error.path !== undefined) continue;
+
     if (error.type === 'RATE_LIMITED') {
       return {
         kind: 'rateLimited',
-        resetAt: null,
+        // The 200 still carries the budget headers, so the reset time is knowable.
+        resetAt: resetFromHeaders(headers),
         message: 'The GitHub rate limit for this token is exhausted.',
       };
     }
-    if (typeof error.message === 'string' && /credential|unauthorized|authentication/i.test(error.message)) {
+    const authByType = error.type === 'UNAUTHORIZED' || error.type === 'FORBIDDEN';
+    // The prose match stays as a fallback for a request-level error carrying no
+    // recognised type, but it is now reached only by errors that failed the
+    // whole request, which is the only place it was ever safe.
+    const authByMessage =
+      typeof error.message === 'string' &&
+      /credential|unauthorized|authentication/i.test(error.message);
+    if (authByType || authByMessage) {
       return { kind: 'auth', message: 'GitHub rejected the token. It may be invalid or expired.' };
     }
   }
@@ -113,7 +144,7 @@ async function post(
     };
   }
 
-  const bodyError = errorForBody(body);
+  const bodyError = errorForBody(body, response.headers);
   if (bodyError) return { ok: false, error: bodyError };
 
   return { ok: true, body };

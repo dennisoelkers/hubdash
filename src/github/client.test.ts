@@ -155,6 +155,77 @@ describe('fetchBoard — transport failures', () => {
     expect(outcome.error.kind).toBe('auth');
   });
 
+  it('does not treat a credential-worded PER-ALIAS error as an auth failure', async () => {
+    // GitHub's real wording for an org with an IP allow list matches every word
+    // the old auth heuristic looked for, but it arrives with a `path` — it is one
+    // repository refusing, not the token being rejected. Spec §9: a per-PR
+    // failure must never take down its neighbours.
+    const body = okBody();
+    const fetchImpl = vi.fn().mockResolvedValue(
+      jsonResponse({
+        ...body,
+        data: { ...body.data, pr1: null },
+        errors: [
+          {
+            type: 'FORBIDDEN',
+            path: ['pr1'],
+            message:
+              'Although you appear to have the correct authorization credentials, the `AcmeCorp` organization has an IP allow list enabled, and 1.2.3.4 is not permitted to access this resource.',
+          },
+        ],
+      }),
+    );
+    const two: TrackedPr[] = [
+      ...prs,
+      { owner: 'AcmeCorp', repo: 'secrets', number: 7, addedAt: '2026-08-27T09:00:00Z' },
+    ];
+
+    const outcome = await fetchBoard('t', two, { fetchImpl });
+    if (!outcome.ok) throw new Error(`expected success, got ${JSON.stringify(outcome.error)}`);
+    expect(outcome.result.entries.map((entry) => entry.status)).toEqual(['ok', 'error']);
+    const errored = outcome.result.entries[1];
+    expect(errored?.status === 'error' ? errored.message : '').toMatch(/IP allow list/);
+  });
+
+  it('maps a request-level UNAUTHORIZED type to an auth error without reading the prose', async () => {
+    const fetchImpl = vi.fn().mockResolvedValue(
+      jsonResponse({ errors: [{ type: 'UNAUTHORIZED', message: 'Resource not accessible.' }] }),
+    );
+    const outcome = await fetchBoard('t', prs, { fetchImpl });
+    if (outcome.ok) throw new Error('expected failure');
+    expect(outcome.error.kind).toBe('auth');
+  });
+
+  it('reads the reset time from the headers for a GraphQL RATE_LIMITED on a 200', async () => {
+    const fetchImpl = vi.fn().mockResolvedValue(
+      jsonResponse({ errors: [{ type: 'RATE_LIMITED', message: 'API rate limit exceeded' }] }, {
+        headers: { 'content-type': 'application/json', 'x-ratelimit-reset': '1787000000' },
+      }),
+    );
+    const outcome = await fetchBoard('t', prs, { fetchImpl });
+    if (outcome.ok) throw new Error('expected failure');
+    expect(outcome.error.kind).toBe('rateLimited');
+    if (outcome.error.kind !== 'rateLimited') return;
+    expect(outcome.error.resetAt).toBe(new Date(1787000000 * 1000).toISOString());
+  });
+
+  it('survives an out-of-range x-ratelimit-reset header rather than throwing', async () => {
+    // `new Date(seconds * 1000).toISOString()` throws a RangeError past ±8.64e15 ms,
+    // and this call sits outside the try that wraps the fetch — it would reject
+    // straight out of fetchBoard into React.
+    const fetchImpl = vi.fn().mockResolvedValue(
+      jsonResponse({}, {
+        status: 429,
+        headers: { 'content-type': 'application/json', 'x-ratelimit-reset': '99999999999999' },
+      }),
+    );
+    const outcome = await fetchBoard('t', prs, { fetchImpl });
+    if (outcome.ok) throw new Error('expected failure');
+    expect(outcome.error.kind).toBe('rateLimited');
+    if (outcome.error.kind !== 'rateLimited') return;
+    expect(outcome.error.resetAt).toBeNull();
+  });
+
   it('never puts the token in an error message', async () => {
     const fetchImpl = vi.fn().mockResolvedValue(jsonResponse({ message: 'Bad credentials' }, { status: 401 }));
     const outcome = await fetchBoard('ghp_secretvalue', prs, { fetchImpl });
