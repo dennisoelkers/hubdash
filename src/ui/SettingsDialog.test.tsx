@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from '@testing-library/react';
+import { act, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 import { SettingsDialog } from './SettingsDialog';
@@ -77,5 +77,40 @@ describe('SettingsDialog', () => {
     const { onClose } = setup();
     await userEvent.keyboard('{Escape}');
     expect(onClose).toHaveBeenCalled();
+  });
+
+  it('does not save when the dialog is dismissed while validation is in flight', async () => {
+    // Regression: `submit` is an async closure and keeps running after the
+    // dialog closes. Without a cancellation guard it called onSave anyway, so a
+    // user who backed out of the dialog still had their token persisted.
+    let release: ((outcome: { ok: true; login: string }) => void) | undefined;
+    const validate = vi.fn().mockImplementation(
+      () =>
+        new Promise<{ ok: true; login: string }>((resolve) => {
+          release = resolve;
+        }),
+    );
+    const onSave = vi.fn();
+    const props = {
+      onClose: vi.fn(),
+      hasToken: false,
+      onSave,
+      onClear: vi.fn(),
+      validate,
+    };
+    const { rerender } = render(<SettingsDialog open {...props} />);
+
+    await userEvent.type(screen.getByLabelText(/personal access token/i), 'ghp_example');
+    await userEvent.click(screen.getByRole('button', { name: /save/i }));
+    expect(validate).toHaveBeenCalledTimes(1);
+
+    // The user dismisses the dialog before GitHub answers.
+    rerender(<SettingsDialog open={false} {...props} />);
+
+    await act(async () => {
+      release?.({ ok: true, login: 'dennisoelkers' });
+    });
+
+    expect(onSave).not.toHaveBeenCalled();
   });
 });

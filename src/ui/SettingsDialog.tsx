@@ -1,4 +1,4 @@
-import { useEffect, useId, useState } from 'react';
+import { useEffect, useId, useRef, useState } from 'react';
 import styled from 'styled-components';
 import { validateToken } from '../github/client';
 import { tokens } from './theme';
@@ -105,6 +105,15 @@ export function SettingsDialog({
   const [checking, setChecking] = useState(false);
   const inputId = useId();
 
+  // `submit` is an async closure that keeps running after the dialog is
+  // dismissed, and it closes over the `open` value from the render that created
+  // it — always `true`. This ref lets it ask whether the dialog is STILL open
+  // at the moment `validate` resolves.
+  const openRef = useRef(open);
+  useEffect(() => {
+    openRef.current = open;
+  }, [open]);
+
   useEffect(() => {
     if (!open) {
       setValue('');
@@ -138,6 +147,14 @@ export function SettingsDialog({
     setLogin(null);
     // Validating here means a typo is caught at entry, not at the next poll.
     const outcome = await validate(token);
+
+    // The dialog can be dismissed while this request is in flight — via the
+    // backdrop, the Close button, or Escape, none of which are blocked during
+    // validation, because a user must always be able to escape a dialog that is
+    // waiting on a slow network. If they did, they backed out: save nothing and
+    // touch no state.
+    if (!openRef.current) return;
+
     setChecking(false);
 
     if (!outcome.ok) {
