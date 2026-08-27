@@ -209,7 +209,7 @@ initial tab.
 
 ```
 ┌─ #4821  Fix index rotation ─────────────────── 2 of 4 landed ─┐
-│ Graylog2/graylog2-server · dennisoelkers                    ✕ │
+│ Example/example-server · dennisoelkers                      ✕ │
 │ ───────────────────────────────────────────────────────────── │
 │   main   #4821   ✓ merged                                     │
 │   6.2    #4840   ✓ merged                                   ✕ │

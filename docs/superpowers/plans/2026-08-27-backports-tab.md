@@ -277,11 +277,11 @@ import {
 } from './backports';
 
 function tracked(number: number): TrackedPr {
-  return { owner: 'Graylog2', repo: 'graylog2-server', number, addedAt: '2026-08-01T00:00:00Z' };
+  return { owner: 'Example', repo: 'example-server', number, addedAt: '2026-08-01T00:00:00Z' };
 }
 
 function keyOf(number: number): PrKey {
-  return prKey('Graylog2', 'graylog2-server', number);
+  return prKey('Example', 'example-server', number);
 }
 
 /** An entry map holding one ok entry per given (number, lifecycle) pair. */
@@ -309,7 +309,7 @@ function group(overrides: Partial<BackportGroup> = {}): BackportGroup {
 
 describe('groupKey', () => {
   it('is the main PR key, so a group needs no generated id', () => {
-    expect(groupKey(group())).toBe('graylog2/graylog2-server#4821');
+    expect(groupKey(group())).toBe('example/example-server#4821');
   });
 });
 
@@ -872,9 +872,9 @@ function fakeStorage(initial: Record<string, string> = {}): Storage {
 }
 
 const group: BackportGroup = {
-  main: { owner: 'Graylog2', repo: 'graylog2-server', number: 4821, addedAt: '2026-08-01T00:00:00Z' },
+  main: { owner: 'Example', repo: 'example-server', number: 4821, addedAt: '2026-08-01T00:00:00Z' },
   slots: [
-    { version: '6.2', pr: { owner: 'Graylog2', repo: 'graylog2-server', number: 4840, addedAt: '2026-08-02T00:00:00Z' } },
+    { version: '6.2', pr: { owner: 'Example', repo: 'example-server', number: 4840, addedAt: '2026-08-02T00:00:00Z' } },
     { version: '6.1', pr: null },
   ],
   addedAt: '2026-08-20T00:00:00Z',
@@ -1140,8 +1140,8 @@ function fakeStorage(initial: Record<string, string> = {}): Storage {
 }
 
 const clock = () => '2026-08-27T12:00:00Z';
-const MAIN = { owner: 'Graylog2', repo: 'graylog2-server', number: 4821 };
-const KEY = 'graylog2/graylog2-server#4821';
+const MAIN = { owner: 'Example', repo: 'example-server', number: 4821 };
+const KEY = 'example/example-server#4821';
 
 function setup(storage: Storage = fakeStorage()) {
   return renderHook(() => useBackportGroups({ storage, clock }));
@@ -1211,7 +1211,7 @@ describe('useBackportGroups — creating and removing groups', () => {
     let outcome: { added: boolean } | undefined;
     act(() => {
       outcome = result.current.addGroup(
-        { owner: 'GRAYLOG2', repo: 'Graylog2-Server', number: 4821 },
+        { owner: 'EXAMPLE', repo: 'Example-Server', number: 4821 },
         ['6.1'],
       );
     });
@@ -1377,7 +1377,7 @@ describe('useBackportGroups — filling slots', () => {
     let outcome: { ok: boolean } | undefined;
     act(() => {
       result.current.fillSlot(KEY, '6.2', { ...MAIN, number: 4840 });
-      outcome = result.current.fillSlot('graylog2/graylog2-server#4900', '6.2', {
+      outcome = result.current.fillSlot('example/example-server#4900', '6.2', {
         ...MAIN,
         number: 4840,
       });
@@ -1934,7 +1934,7 @@ import type { BackportSlot, PrEntry, PrKey } from '../types';
 import { SlotRow } from './SlotRow';
 
 function tracked(number: number) {
-  return { owner: 'Graylog2', repo: 'graylog2-server', number, addedAt: '2026-08-01T00:00:00Z' };
+  return { owner: 'Example', repo: 'example-server', number, addedAt: '2026-08-01T00:00:00Z' };
 }
 
 function entryMap(...specs: Array<[number, 'OPEN' | 'CLOSED' | 'MERGED']>): Map<PrKey, PrEntry> {
@@ -1980,7 +1980,7 @@ describe('SlotRow — display', () => {
 
   it('shows the GitHub message for an errored PR', () => {
     const map = new Map<PrKey, PrEntry>([
-      ['graylog2/graylog2-server#4840', { status: 'error', key: 'graylog2/graylog2-server#4840', tracked: tracked(4840), message: 'Not found' }],
+      ['example/example-server#4840', { status: 'error', key: 'example/example-server#4840', tracked: tracked(4840), message: 'Not found' }],
     ]);
     render(<SlotRow slot={FILLED} entries={map} onFill={() => ({ ok: true })} onRemoveVersion={() => {}} />);
     expect(screen.getByText(/not found/i)).toBeInTheDocument();
@@ -1990,7 +1990,7 @@ describe('SlotRow — display', () => {
     render(<SlotRow slot={FILLED} entries={entryMap([4840, 'OPEN'])} onFill={() => ({ ok: true })} onRemoveVersion={() => {}} />);
     expect(screen.getByRole('link', { name: '#4840' })).toHaveAttribute(
       'href',
-      'https://github.com/Graylog2/graylog2-server/pull/4840',
+      'https://github.com/Example/example-server/pull/4840',
     );
   });
 });
@@ -2001,9 +2001,9 @@ describe('SlotRow — filling by drop', () => {
     render(<SlotRow slot={EMPTY} entries={new Map()} onFill={onFill} onRemoveVersion={() => {}} />);
     const row = screen.getByTestId('slot-row');
     const event = new Event('drop', { bubbles: true, cancelable: true });
-    Object.assign(event, { dataTransfer: dataTransfer('https://github.com/Graylog2/graylog2-server/pull/4839') });
+    Object.assign(event, { dataTransfer: dataTransfer('https://github.com/Example/example-server/pull/4839') });
     act(() => void row.dispatchEvent(event));
-    expect(onFill).toHaveBeenCalledWith({ owner: 'Graylog2', repo: 'graylog2-server', number: 4839 });
+    expect(onFill).toHaveBeenCalledWith({ owner: 'Example', repo: 'example-server', number: 4839 });
   });
 
   it('shows a parse error inline without calling onFill', () => {
@@ -2022,7 +2022,7 @@ describe('SlotRow — filling by drop', () => {
     render(<SlotRow slot={EMPTY} entries={new Map()} onFill={onFill} onRemoveVersion={() => {}} />);
     const row = screen.getByTestId('slot-row');
     const event = new Event('drop', { bubbles: true, cancelable: true });
-    Object.assign(event, { dataTransfer: dataTransfer('https://github.com/Graylog2/graylog2-server/pull/4840') });
+    Object.assign(event, { dataTransfer: dataTransfer('https://github.com/Example/example-server/pull/4840') });
     act(() => void row.dispatchEvent(event));
     expect(screen.getByRole('alert')).toHaveTextContent(/6\.1 slot/);
   });
@@ -2041,8 +2041,8 @@ describe('SlotRow — filling by click-to-paste', () => {
     render(<SlotRow slot={EMPTY} entries={new Map()} onFill={onFill} onRemoveVersion={() => {}} />);
     await userEvent.click(screen.getByRole('button', { name: /add a link/i }));
     const input = screen.getByLabelText(/pull request url/i);
-    await userEvent.type(input, 'https://github.com/Graylog2/graylog2-server/pull/4839{Enter}');
-    expect(onFill).toHaveBeenCalledWith({ owner: 'Graylog2', repo: 'graylog2-server', number: 4839 });
+    await userEvent.type(input, 'https://github.com/Example/example-server/pull/4839{Enter}');
+    expect(onFill).toHaveBeenCalledWith({ owner: 'Example', repo: 'example-server', number: 4839 });
   });
 });
 
@@ -2312,7 +2312,7 @@ import type { BackportGroup, PrEntry, PrKey } from '../types';
 import { BackportGroupCard } from './BackportGroupCard';
 
 function tracked(number: number) {
-  return { owner: 'Graylog2', repo: 'graylog2-server', number, addedAt: '2026-08-01T00:00:00Z' };
+  return { owner: 'Example', repo: 'example-server', number, addedAt: '2026-08-01T00:00:00Z' };
 }
 
 function entryMap(...specs: Array<[number, 'OPEN' | 'CLOSED' | 'MERGED']>): Map<PrKey, PrEntry> {
@@ -2355,7 +2355,7 @@ describe('BackportGroupCard — display', () => {
     setup();
     expect(screen.getByText('#4821')).toBeInTheDocument();
     expect(screen.getByText('Fix 4821')).toBeInTheDocument();
-    expect(screen.getByText('Graylog2/graylog2-server')).toBeInTheDocument();
+    expect(screen.getByText('Example/example-server')).toBeInTheDocument();
   });
 
   it('shows the roll-up as N of M landed', () => {
@@ -2656,7 +2656,7 @@ import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 import { AddBackportGroupDialog } from './AddBackportGroupDialog';
 
-const URL = 'https://github.com/Graylog2/graylog2-server/pull/4821';
+const URL = 'https://github.com/Example/example-server/pull/4821';
 
 function setup(onAdd = vi.fn().mockReturnValue({ added: true, key: 'k' })) {
   const onClose = vi.fn();
@@ -2677,7 +2677,7 @@ describe('AddBackportGroupDialog', () => {
     await userEvent.click(screen.getByRole('button', { name: /track/i }));
 
     expect(onAdd).toHaveBeenCalledWith(
-      { owner: 'Graylog2', repo: 'graylog2-server', number: 4821 },
+      { owner: 'Example', repo: 'example-server', number: 4821 },
       ['6.2', '6.1'],
     );
     expect(onClose).toHaveBeenCalled();
@@ -2688,7 +2688,7 @@ describe('AddBackportGroupDialog', () => {
     await userEvent.type(screen.getByLabelText(/main pull request/i), URL);
     await userEvent.click(screen.getByRole('button', { name: /track/i }));
     expect(onAdd).toHaveBeenCalledWith(
-      { owner: 'Graylog2', repo: 'graylog2-server', number: 4821 },
+      { owner: 'Example', repo: 'example-server', number: 4821 },
       [],
     );
   });
@@ -2959,7 +2959,7 @@ import type { BackportGroup, PrEntry, PrKey } from '../types';
 import { BackportsTab } from './BackportsTab';
 
 function tracked(number: number) {
-  return { owner: 'Graylog2', repo: 'graylog2-server', number, addedAt: '2026-08-01T00:00:00Z' };
+  return { owner: 'Example', repo: 'example-server', number, addedAt: '2026-08-01T00:00:00Z' };
 }
 
 function group(mainNumber: number, addedAt: string): BackportGroup {
@@ -3005,7 +3005,7 @@ describe('BackportsTab', () => {
     render(<BackportsTab {...baseProps({ groups: [group(4821, '2026-08-20T00:00:00Z')], onRemoveGroup })} />);
     const { default: userEvent } = await import('@testing-library/user-event');
     await userEvent.click(screen.getByRole('button', { name: /remove group/i }));
-    expect(onRemoveGroup).toHaveBeenCalledWith('graylog2/graylog2-server#4821');
+    expect(onRemoveGroup).toHaveBeenCalledWith('example/example-server#4821');
   });
 });
 ```
@@ -3466,7 +3466,7 @@ describe('App — the Backports tab', () => {
     await userEvent.click(screen.getByRole('button', { name: /track backports/i }));
     await userEvent.type(
       screen.getByLabelText(/main pull request/i),
-      'https://github.com/Graylog2/graylog2-server/pull/4900',
+      'https://github.com/Example/example-server/pull/4900',
     );
     await userEvent.click(screen.getByRole('button', { name: /^track$/i }));
 
@@ -3487,7 +3487,7 @@ describe('App — the Backports tab', () => {
     await userEvent.click(screen.getByRole('button', { name: /track backports/i }));
     await userEvent.type(
       screen.getByLabelText(/main pull request/i),
-      'https://github.com/Graylog2/graylog2-server/pull/4821',
+      'https://github.com/Example/example-server/pull/4821',
     );
     await userEvent.type(screen.getByLabelText(/backport to/i), '6.2');
     await userEvent.click(screen.getByRole('button', { name: /^track$/i }));
@@ -3497,7 +3497,7 @@ describe('App — the Backports tab', () => {
     Object.assign(event, {
       dataTransfer: {
         types: ['text/plain'],
-        getData: () => 'https://github.com/Graylog2/graylog2-server/pull/4840',
+        getData: () => 'https://github.com/Example/example-server/pull/4840',
       },
     });
     row.dispatchEvent(event);

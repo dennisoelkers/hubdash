@@ -71,8 +71,8 @@ unchanged and still binds it.
 
 ```ts
 type TrackedPr = {
-  owner: string;    // "Graylog2"
-  repo: string;     // "graylog2-server"
+  owner: string;    // "Example"
+  repo: string;     // "example-server"
   number: number;   // 4821
   addedAt: string;  // ISO 8601
 };
@@ -103,10 +103,10 @@ aliased `repository` field per PR sharing a common fragment:
 ```graphql
 query Board {
   rateLimit { limit cost remaining resetAt }
-  pr0: repository(owner: "Graylog2", name: "graylog2-server") {
+  pr0: repository(owner: "Example", name: "example-server") {
     pullRequest(number: 4821) { ...prFields }
   }
-  pr1: repository(owner: "Graylog2", name: "graylog-plugin-enterprise") {
+  pr1: repository(owner: "Example", name: "example-plugin-enterprise") {
     pullRequest(number: 912) { ...prFields }
   }
 }
@@ -256,7 +256,7 @@ badge shows the numerator only.
 │ Waiting      3 │ Needs action     3 │ Ready                2 │
 │ ┌────────────┐ │ ┌────────────────┐ │ ┌────────────────────┐ │
 │ │ #4821      │ │ │ #4790          │ │ │ #4755              │ │
-│ │ graylog2…  │ │ │ ● 2 failing    │ │ │ ✓✓ approved ✓ green│ │
+│ │ example…   │ │ │ ● 2 failing    │ │ │ ✓✓ approved ✓ green│ │
 │ │ ◌ CI       │ │ └────────────────┘ │ └────────────────────┘ │
 │ └────────────┘ │ ╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌ │                        │
 │      …         │ ╎ #4830  ⊘ draft ╎ │                        │

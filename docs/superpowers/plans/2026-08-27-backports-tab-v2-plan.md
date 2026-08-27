@@ -197,7 +197,7 @@ it('stops the drop event from reaching the window', () => {
   try {
     const row = screen.getByTestId('slot-row');
     const event = new Event('drop', { bubbles: true, cancelable: true });
-    Object.assign(event, { dataTransfer: dataTransfer('https://github.com/Graylog2/graylog2-server/pull/4839') });
+    Object.assign(event, { dataTransfer: dataTransfer('https://github.com/Example/example-server/pull/4839') });
     act(() => void row.dispatchEvent(event));
     expect(windowListener).not.toHaveBeenCalled();
   } finally {
@@ -406,7 +406,7 @@ it('opens the pre-filled create dialog, rather than adding to the board, when a 
   Object.assign(event, {
     dataTransfer: {
       types: ['text/plain'],
-      getData: () => 'https://github.com/Graylog2/graylog2-server/pull/4821',
+      getData: () => 'https://github.com/Example/example-server/pull/4821',
     },
   });
   await act(async () => {
@@ -415,7 +415,7 @@ it('opens the pre-filled create dialog, rather than adding to the board, when a 
 
   expect(screen.getByRole('dialog', { name: /track backports/i })).toBeInTheDocument();
   expect(screen.getByLabelText(/main pull request/i)).toHaveValue(
-    'https://github.com/Graylog2/graylog2-server/pull/4821',
+    'https://github.com/Example/example-server/pull/4821',
   );
   expect(screen.getByRole('tab', { name: /board/i })).toHaveTextContent('0');
   expect(storage.getItem(TRACKED_PRS_KEY)).toBeNull();
@@ -448,7 +448,7 @@ it('does not also open the create dialog when a drop lands on an existing slot',
   await userEvent.click(screen.getByRole('button', { name: /track backports/i }));
   await userEvent.type(
     screen.getByLabelText(/main pull request/i),
-    'https://github.com/Graylog2/graylog2-server/pull/4821',
+    'https://github.com/Example/example-server/pull/4821',
   );
   await userEvent.type(screen.getByLabelText(/backport to/i), '6.2');
   await userEvent.click(screen.getByRole('button', { name: /^track$/i }));
@@ -458,7 +458,7 @@ it('does not also open the create dialog when a drop lands on an existing slot',
   Object.assign(event, {
     dataTransfer: {
       types: ['text/plain'],
-      getData: () => 'https://github.com/Graylog2/graylog2-server/pull/4840',
+      getData: () => 'https://github.com/Example/example-server/pull/4840',
     },
   });
   await act(async () => {
@@ -478,7 +478,7 @@ it('creates a group from a background drop once the pre-filled dialog is submitt
   Object.assign(event, {
     dataTransfer: {
       types: ['text/plain'],
-      getData: () => 'https://github.com/Graylog2/graylog2-server/pull/4821',
+      getData: () => 'https://github.com/Example/example-server/pull/4821',
     },
   });
   await act(async () => {
@@ -501,7 +501,7 @@ it('creates nothing when the pre-filled dialog is cancelled', async () => {
   Object.assign(event, {
     dataTransfer: {
       types: ['text/plain'],
-      getData: () => 'https://github.com/Graylog2/graylog2-server/pull/4821',
+      getData: () => 'https://github.com/Example/example-server/pull/4821',
     },
   });
   await act(async () => {
@@ -806,9 +806,9 @@ In `src/storage/backportGroups.test.ts`, update the top-level `group` fixture to
 
 ```ts
 const group: BackportGroup = {
-  main: { owner: 'Graylog2', repo: 'graylog2-server', number: 4821, addedAt: '2026-08-01T00:00:00Z' },
+  main: { owner: 'Example', repo: 'example-server', number: 4821, addedAt: '2026-08-01T00:00:00Z' },
   slots: [
-    { version: '6.2', pr: { owner: 'Graylog2', repo: 'graylog2-server', number: 4840, addedAt: '2026-08-02T00:00:00Z' } },
+    { version: '6.2', pr: { owner: 'Example', repo: 'example-server', number: 4840, addedAt: '2026-08-02T00:00:00Z' } },
     { version: '6.1', pr: null },
   ],
   addedAt: '2026-08-20T00:00:00Z',
@@ -1375,7 +1375,7 @@ describe('BackportGroupArchiveSection via BackportsTab', () => {
     const entries = entryMap([4821, 'MERGED'], [4840, 'MERGED']);
     render(<BackportsTab {...baseProps({ groups, entries, onArchiveGroup })} />);
     await userEvent.click(screen.getByRole('button', { name: /^archive$/i }));
-    expect(onArchiveGroup).toHaveBeenCalledWith('graylog2/graylog2-server#4821');
+    expect(onArchiveGroup).toHaveBeenCalledWith('example/example-server#4821');
   });
 });
 ```
@@ -1625,7 +1625,7 @@ it('archives a fully-landed group into the collapsed Archive section', async () 
   await userEvent.click(screen.getByRole('button', { name: /track backports/i }));
   await userEvent.type(
     screen.getByLabelText(/main pull request/i),
-    'https://github.com/Graylog2/graylog2-server/pull/4821',
+    'https://github.com/Example/example-server/pull/4821',
   );
   await userEvent.type(screen.getByLabelText(/backport to/i), '6.2');
   await userEvent.click(screen.getByRole('button', { name: /^track$/i }));
@@ -1635,7 +1635,7 @@ it('archives a fully-landed group into the collapsed Archive section', async () 
   Object.assign(event, {
     dataTransfer: {
       types: ['text/plain'],
-      getData: () => 'https://github.com/Graylog2/graylog2-server/pull/4840',
+      getData: () => 'https://github.com/Example/example-server/pull/4840',
     },
   });
   await act(async () => {
