@@ -2,12 +2,13 @@ import { useEffect, useId, useState } from 'react';
 import styled from 'styled-components';
 import type { ParsedPr } from '../github/parseUrl';
 import { parsePrUrl } from '../github/parseUrl';
+import type { PrKey } from '../types';
 import { tokens } from './theme';
 
 export type AddPrDialogProps = {
   open: boolean;
   onClose: () => void;
-  onAdd: (parsed: ParsedPr) => { added: boolean; key: string };
+  onAdd: (parsed: ParsedPr) => { added: boolean; key: PrKey };
 };
 
 const Backdrop = styled.div`

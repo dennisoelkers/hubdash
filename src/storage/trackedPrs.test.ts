@@ -51,6 +51,16 @@ describe('loadTrackedPrs', () => {
     expect(loadTrackedPrs(fakeStorage({ [TRACKED_PRS_KEY]: '{"version":1}' })).error).toBeTruthy();
   });
 
+  it('does not blame the version when the envelope has none', () => {
+    // A payload with no version key at all is a wrong shape, not a future one.
+    // Reporting "unsupported version" sends the reader looking for a migration
+    // that was never the problem.
+    const raw = JSON.stringify({ prs: [pr] });
+    const error = loadTrackedPrs(fakeStorage({ [TRACKED_PRS_KEY]: raw })).error;
+    expect(error).toBeTruthy();
+    expect(error).not.toMatch(/version/i);
+  });
+
   it('rejects an unknown version', () => {
     const raw = JSON.stringify({ version: 99, prs: [pr] });
     expect(loadTrackedPrs(fakeStorage({ [TRACKED_PRS_KEY]: raw })).error).toMatch(/version/i);

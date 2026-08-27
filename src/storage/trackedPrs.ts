@@ -82,11 +82,16 @@ export function loadTrackedPrs(storage?: Storage | null): LoadTrackedPrsResult {
   }
 
   const envelope = parsed as Record<string, unknown>;
+  // A missing `version` is a wrong envelope, not a future one — say so, rather
+  // than sending the reader looking for a migration that was never the problem.
+  if (!('version' in envelope)) {
+    return reject(storage, raw, 'Your tracked pull requests could not be read and were reset.');
+  }
   if (envelope.version !== VERSION) {
     return reject(
       storage,
       raw,
-      `Your tracked pull requests use an unsupported version and were reset.`,
+      'Your tracked pull requests use an unsupported version and were reset.',
     );
   }
   if (!Array.isArray(envelope.prs) || !envelope.prs.every(isTrackedPr)) {
