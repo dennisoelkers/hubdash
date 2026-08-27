@@ -1,20 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-
-function firstUri(raw: string): string {
-  // A text/uri-list may carry comment lines beginning with '#'.
-  for (const line of raw.split(/\r?\n/)) {
-    const trimmed = line.trim();
-    if (trimmed !== '' && !trimmed.startsWith('#')) return trimmed;
-  }
-  return '';
-}
-
-function textFrom(transfer: DataTransfer | null | undefined): string {
-  if (!transfer) return '';
-  const uriList = transfer.getData('text/uri-list');
-  if (uriList.trim() !== '') return firstUri(uriList);
-  return transfer.getData('text/plain').trim();
-}
+import { textFrom } from '../domain/dropText';
 
 function isEditable(target: EventTarget | null): boolean {
   if (!(target instanceof HTMLElement)) return false;
