@@ -674,10 +674,9 @@ describe('App — the Backports tab', () => {
         getData: () => 'https://github.com/Graylog2/graylog2-server/pull/4840',
       },
     });
-    // Wrapped in act because the drop updates state synchronously — twice, in
-    // fact: SlotRow's handler fills the slot, and the event also reaches
-    // useDragAndPaste's window listener. Same reason as the paste test above;
-    // unwrapped, both emit real act() warnings.
+    // Wrapped in act because the drop updates state synchronously. SlotRow's own
+    // handler fills the slot and stops the event from reaching the window
+    // listener below (spec round 2 §4) — this only exercises the slot fill.
     await act(async () => {
       row.dispatchEvent(event);
     });
@@ -702,12 +701,7 @@ describe('App — the Backports tab', () => {
     expect(screen.queryByTestId('drop-overlay')).not.toBeInTheDocument();
   });
 
-  it('does not add a dropped link to the board while the Backports tab is active', async () => {
-    // Beyond the brief's six, because nothing else covers the guard inside
-    // addFromText: removing it leaves all six still green, yet a link dropped
-    // anywhere on this tab would silently join the board. Spec §10.4 disables
-    // the behaviour, so the assertion is that the board is untouched — not that
-    // no event arrived.
+  it('opens the pre-filled create dialog, rather than adding to the board, when a link is dropped on the Backports background', async () => {
     const fetchImpl = vi.fn();
     const storage = fakeStorage({ [TOKEN_KEY]: storedToken });
     render(<App deps={{ fetchImpl, storage, clock, nowMs }} />);
@@ -724,9 +718,107 @@ describe('App — the Backports tab', () => {
       window.dispatchEvent(event);
     });
 
+    expect(screen.getByRole('dialog', { name: /track backports/i })).toBeInTheDocument();
+    expect(screen.getByLabelText(/main pull request/i)).toHaveValue(
+      'https://github.com/Graylog2/graylog2-server/pull/4821',
+    );
     expect(screen.getByRole('tab', { name: /board/i })).toHaveTextContent('0');
     expect(storage.getItem(TRACKED_PRS_KEY)).toBeNull();
     expect(fetchImpl).not.toHaveBeenCalled();
+  });
+
+  it('shows the parser error, and opens no dialog, for an unparseable link dropped on the Backports background', async () => {
+    const storage = fakeStorage({ [TOKEN_KEY]: storedToken });
+    render(<App deps={{ fetchImpl: vi.fn(), storage, clock, nowMs }} />);
+    await userEvent.click(await screen.findByRole('tab', { name: /backports/i }));
+
+    const event = new Event('drop', { bubbles: true, cancelable: true });
+    Object.assign(event, {
+      dataTransfer: { types: ['text/plain'], getData: () => 'https://gitlab.com/a/b/pull/1' },
+    });
+    await act(async () => {
+      window.dispatchEvent(event);
+    });
+
+    expect(await screen.findByTestId('banner')).toHaveTextContent(/github\.com/i);
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+  });
+
+  it('does not also open the create dialog when a drop lands on an existing slot', async () => {
+    const fetchImpl = boardResponder({ pr0: prNode(4821), pr1: prNode(4840) });
+    const storage = fakeStorage({ [TOKEN_KEY]: storedToken });
+    render(<App deps={{ fetchImpl, storage, clock, nowMs }} />);
+
+    await userEvent.click(await screen.findByRole('tab', { name: /backports/i }));
+    await userEvent.click(screen.getByRole('button', { name: /track backports/i }));
+    await userEvent.type(
+      screen.getByLabelText(/main pull request/i),
+      'https://github.com/Graylog2/graylog2-server/pull/4821',
+    );
+    await userEvent.type(screen.getByLabelText(/backport to/i), '6.2');
+    await userEvent.click(screen.getByRole('button', { name: /^track$/i }));
+
+    const row = screen.getByTestId('slot-row');
+    const event = new Event('drop', { bubbles: true, cancelable: true });
+    Object.assign(event, {
+      dataTransfer: {
+        types: ['text/plain'],
+        getData: () => 'https://github.com/Graylog2/graylog2-server/pull/4840',
+      },
+    });
+    await act(async () => {
+      row.dispatchEvent(event);
+    });
+
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+  });
+
+  it('creates a group from a background drop once the pre-filled dialog is submitted', async () => {
+    const fetchImpl = boardResponder({ pr0: prNode(4821) });
+    const storage = fakeStorage({ [TOKEN_KEY]: storedToken });
+    render(<App deps={{ fetchImpl, storage, clock, nowMs }} />);
+    await userEvent.click(await screen.findByRole('tab', { name: /backports/i }));
+
+    const event = new Event('drop', { bubbles: true, cancelable: true });
+    Object.assign(event, {
+      dataTransfer: {
+        types: ['text/plain'],
+        getData: () => 'https://github.com/Graylog2/graylog2-server/pull/4821',
+      },
+    });
+    await act(async () => {
+      window.dispatchEvent(event);
+    });
+
+    await userEvent.type(screen.getByLabelText(/backport to/i), '6.2');
+    await userEvent.click(screen.getByRole('button', { name: /^track$/i }));
+
+    expect(await screen.findByText('#4821')).toBeInTheDocument();
+  });
+
+  it('creates nothing when the pre-filled dialog is cancelled', async () => {
+    const fetchImpl = vi.fn();
+    const storage = fakeStorage({ [TOKEN_KEY]: storedToken });
+    render(<App deps={{ fetchImpl, storage, clock, nowMs }} />);
+    await userEvent.click(await screen.findByRole('tab', { name: /backports/i }));
+
+    const event = new Event('drop', { bubbles: true, cancelable: true });
+    Object.assign(event, {
+      dataTransfer: {
+        types: ['text/plain'],
+        getData: () => 'https://github.com/Graylog2/graylog2-server/pull/4821',
+      },
+    });
+    await act(async () => {
+      window.dispatchEvent(event);
+    });
+    await screen.findByRole('dialog', { name: /track backports/i });
+
+    await userEvent.click(screen.getByRole('button', { name: /cancel/i }));
+
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    expect(screen.getByRole('tab', { name: /backports/i })).toHaveTextContent('0');
+    expect(storage.getItem(BACKPORT_GROUPS_KEY)).toBeNull();
   });
 
   it('reports an unreadable stored backport-groups value without touching the board', async () => {

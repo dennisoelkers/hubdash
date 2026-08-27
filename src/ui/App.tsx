@@ -150,6 +150,7 @@ export function App({ deps = {} }: { deps?: AppDeps } = {}) {
   const [location, navigate] = useLocation();
   const activeTab: TabId = location === '/backports' ? 'backports' : 'board';
   const [backportDialogOpen, setBackportDialogOpen] = useState(false);
+  const [backportInitialUrl, setBackportInitialUrl] = useState<string | undefined>(undefined);
   const [tick, setTick] = useState(() => nowMs());
 
   // Spec round 2 §3: the URL is the only source of truth for which tab shows.
@@ -241,19 +242,24 @@ export function App({ deps = {} }: { deps?: AppDeps } = {}) {
     [addGroup, flash],
   );
 
+  // Spec round 2 §4: a valid link adds to the board when the Board tab is
+  // active, and opens the create-group dialog pre-filled when the Backports
+  // tab is active. A drop landing on an existing slot never reaches here —
+  // `SlotRow` stops it from propagating this far (Task 2).
   const addFromText = useCallback(
     (text: string) => {
-      // Spec §10.4: on the Backports tab a dropped link has to land in a
-      // specific slot, so the window-wide "add to the board" path stands down.
-      // The listeners stay registered — only the behaviour is gated.
-      if (activeTab !== 'board') return;
       const parsed = parsePrUrl(text);
       if (!parsed.ok) {
         setInputError(parsed.error);
         return;
       }
       setInputError(null);
-      addParsed(parsed.value);
+      if (activeTab === 'board') {
+        addParsed(parsed.value);
+        return;
+      }
+      setBackportInitialUrl(text);
+      setBackportDialogOpen(true);
     },
     [activeTab, addParsed],
   );
@@ -371,8 +377,12 @@ export function App({ deps = {} }: { deps?: AppDeps } = {}) {
       <AddPrDialog open={addOpen} onClose={() => setAddOpen(false)} onAdd={addParsed} />
       <AddBackportGroupDialog
         open={backportDialogOpen}
-        onClose={() => setBackportDialogOpen(false)}
+        onClose={() => {
+          setBackportDialogOpen(false);
+          setBackportInitialUrl(undefined);
+        }}
         onAdd={addGroupOrFlash}
+        initialUrl={backportInitialUrl}
       />
       <SettingsDialog
         open={settingsOpen}
