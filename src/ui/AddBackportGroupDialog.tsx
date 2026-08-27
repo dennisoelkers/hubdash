@@ -9,6 +9,7 @@ export type AddBackportGroupDialogProps = {
   open: boolean;
   onClose: () => void;
   onAdd: (main: ParsedPr, versions: string[]) => { added: boolean; key: string };
+  initialUrl?: string;
 };
 
 const Backdrop = styled.div`
@@ -82,7 +83,7 @@ const Button = styled.button`
   }
 `;
 
-export function AddBackportGroupDialog({ open, onClose, onAdd }: AddBackportGroupDialogProps) {
+export function AddBackportGroupDialog({ open, onClose, onAdd, initialUrl }: AddBackportGroupDialogProps) {
   const [url, setUrl] = useState('');
   const [versions, setVersions] = useState('');
   const [error, setError] = useState<string | null>(null);
@@ -90,12 +91,14 @@ export function AddBackportGroupDialog({ open, onClose, onAdd }: AddBackportGrou
   const versionsId = useId();
 
   useEffect(() => {
-    if (!open) {
+    if (open) {
+      setUrl(initialUrl ?? '');
+    } else {
       setUrl('');
       setVersions('');
       setError(null);
     }
-  }, [open]);
+  }, [open, initialUrl]);
 
   useEffect(() => {
     if (!open) return;
@@ -132,7 +135,7 @@ export function AddBackportGroupDialog({ open, onClose, onAdd }: AddBackportGrou
         <Label htmlFor={urlId}>Main pull request</Label>
         <Input
           id={urlId}
-          autoFocus
+          autoFocus={initialUrl === undefined}
           value={url}
           onChange={(event) => {
             setUrl(event.target.value);
@@ -143,6 +146,7 @@ export function AddBackportGroupDialog({ open, onClose, onAdd }: AddBackportGrou
         <Label htmlFor={versionsId}>Backport to</Label>
         <Input
           id={versionsId}
+          autoFocus={initialUrl !== undefined}
           value={versions}
           onChange={(event) => setVersions(event.target.value)}
           placeholder="6.2, 6.1, 6.0"

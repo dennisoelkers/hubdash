@@ -76,3 +76,51 @@ describe('AddBackportGroupDialog', () => {
     expect(screen.getByLabelText(/main pull request/i)).toHaveValue('');
   });
 });
+
+describe('AddBackportGroupDialog — pre-filled from a drop', () => {
+  it('pre-fills the URL field from initialUrl when opened', () => {
+    render(
+      <AddBackportGroupDialog
+        open
+        onClose={() => {}}
+        onAdd={() => ({ added: true, key: 'k' })}
+        initialUrl={URL}
+      />,
+    );
+    expect(screen.getByLabelText(/main pull request/i)).toHaveValue(URL);
+  });
+
+  it('moves focus to the versions field when pre-filled', () => {
+    render(
+      <AddBackportGroupDialog
+        open
+        onClose={() => {}}
+        onAdd={() => ({ added: true, key: 'k' })}
+        initialUrl={URL}
+      />,
+    );
+    expect(screen.getByLabelText(/backport to/i)).toHaveFocus();
+  });
+
+  it('focuses the URL field instead when opened without initialUrl', () => {
+    render(<AddBackportGroupDialog open onClose={() => {}} onAdd={() => ({ added: true, key: 'k' })} />);
+    expect(screen.getByLabelText(/main pull request/i)).toHaveFocus();
+  });
+
+  it('leaves the URL field empty on a later open with no initialUrl', () => {
+    const { rerender } = render(
+      <AddBackportGroupDialog
+        open
+        onClose={() => {}}
+        onAdd={() => ({ added: true, key: 'k' })}
+        initialUrl={URL}
+      />,
+    );
+    expect(screen.getByLabelText(/main pull request/i)).toHaveValue(URL);
+    rerender(
+      <AddBackportGroupDialog open={false} onClose={() => {}} onAdd={() => ({ added: true, key: 'k' })} />,
+    );
+    rerender(<AddBackportGroupDialog open onClose={() => {}} onAdd={() => ({ added: true, key: 'k' })} />);
+    expect(screen.getByLabelText(/main pull request/i)).toHaveValue('');
+  });
+});
