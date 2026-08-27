@@ -1,6 +1,7 @@
 import { act, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { BACKPORT_GROUPS_KEY } from '../storage/backportGroups';
 import { TOKEN_KEY } from '../storage/token';
 import { TRACKED_PRS_KEY } from '../storage/trackedPrs';
 import { App, POLL_INTERVAL_MS, RATE_LIMIT_FALLBACK_MS } from './App';
@@ -487,5 +488,132 @@ describe('App — freshness and the rate-limit backoff', () => {
       vi.advanceTimersByTime(1000);
     });
     expect(await screen.findByText('#4821')).toBeInTheDocument();
+  });
+});
+
+describe('App — the Backports tab', () => {
+  it('starts on the Board tab', async () => {
+    const storage = fakeStorage({ [TOKEN_KEY]: storedToken });
+    render(<App deps={{ fetchImpl: vi.fn(), storage, clock, nowMs }} />);
+    expect(await screen.findByRole('tab', { name: /board/i })).toHaveAttribute('aria-selected', 'true');
+  });
+
+  it('switches to Backports and shows its own empty state', async () => {
+    const storage = fakeStorage({ [TOKEN_KEY]: storedToken });
+    render(<App deps={{ fetchImpl: vi.fn(), storage, clock, nowMs }} />);
+    await userEvent.click(await screen.findByRole('tab', { name: /backports/i }));
+    expect(screen.getByText(/track a pull request/i)).toBeInTheDocument();
+  });
+
+  it('creates a group and polls its main PR in the same request as the board', async () => {
+    const fetchImpl = boardResponder({ pr0: prNode(4821), pr1: prNode(4900) });
+    const storage = fakeStorage({ [TOKEN_KEY]: storedToken, [TRACKED_PRS_KEY]: storedPrs(4821) });
+    render(<App deps={{ fetchImpl, storage, clock, nowMs }} />);
+    await screen.findByText('#4821');
+
+    await userEvent.click(screen.getByRole('tab', { name: /backports/i }));
+    await userEvent.click(screen.getByRole('button', { name: /track backports/i }));
+    await userEvent.type(
+      screen.getByLabelText(/main pull request/i),
+      'https://github.com/Graylog2/graylog2-server/pull/4900',
+    );
+    await userEvent.click(screen.getByRole('button', { name: /^track$/i }));
+
+    // One poll covers the board's #4821 and the group's main #4900.
+    expect(await screen.findByText('#4900')).toBeInTheDocument();
+    expect(fetchImpl).toHaveBeenCalledTimes(2); // mount poll, then the immediate poll on adding the group
+  });
+
+  it('fills a slot by dropping a link on it and the card updates on the next poll', async () => {
+    const fetchImpl = boardResponder({
+      pr0: prNode(4821),
+      pr1: prNode(4840, { state: 'MERGED' }),
+    });
+    const storage = fakeStorage({ [TOKEN_KEY]: storedToken });
+    render(<App deps={{ fetchImpl, storage, clock, nowMs }} />);
+
+    await userEvent.click(await screen.findByRole('tab', { name: /backports/i }));
+    await userEvent.click(screen.getByRole('button', { name: /track backports/i }));
+    await userEvent.type(
+      screen.getByLabelText(/main pull request/i),
+      'https://github.com/Graylog2/graylog2-server/pull/4821',
+    );
+    await userEvent.type(screen.getByLabelText(/backport to/i), '6.2');
+    await userEvent.click(screen.getByRole('button', { name: /^track$/i }));
+
+    const row = screen.getByTestId('slot-row');
+    const event = new Event('drop', { bubbles: true, cancelable: true });
+    Object.assign(event, {
+      dataTransfer: {
+        types: ['text/plain'],
+        getData: () => 'https://github.com/Graylog2/graylog2-server/pull/4840',
+      },
+    });
+    // Wrapped in act because the drop updates state synchronously — twice, in
+    // fact: SlotRow's handler fills the slot, and the event also reaches
+    // useDragAndPaste's window listener. Same reason as the paste test above;
+    // unwrapped, both emit real act() warnings.
+    await act(async () => {
+      row.dispatchEvent(event);
+    });
+
+    expect(await screen.findByText(/merged/i)).toBeInTheDocument();
+  });
+
+  it('does not open the drop overlay while the Backports tab is active', async () => {
+    const storage = fakeStorage({ [TOKEN_KEY]: storedToken });
+    render(<App deps={{ fetchImpl: vi.fn(), storage, clock, nowMs }} />);
+    await userEvent.click(await screen.findByRole('tab', { name: /backports/i }));
+
+    const event = new Event('dragenter', { bubbles: true, cancelable: true });
+    Object.assign(event, { dataTransfer: { types: ['text/uri-list'], getData: () => '' } });
+    // Wrapped in act for the same reason: the drag listener sets isDragging
+    // synchronously. The point of the test is that isDragging being true is no
+    // longer enough to show the overlay while this tab is active.
+    await act(async () => {
+      window.dispatchEvent(event);
+    });
+
+    expect(screen.queryByTestId('drop-overlay')).not.toBeInTheDocument();
+  });
+
+  it('does not add a dropped link to the board while the Backports tab is active', async () => {
+    // Beyond the brief's six, because nothing else covers the guard inside
+    // addFromText: removing it leaves all six still green, yet a link dropped
+    // anywhere on this tab would silently join the board. Spec §10.4 disables
+    // the behaviour, so the assertion is that the board is untouched — not that
+    // no event arrived.
+    const fetchImpl = vi.fn();
+    const storage = fakeStorage({ [TOKEN_KEY]: storedToken });
+    render(<App deps={{ fetchImpl, storage, clock, nowMs }} />);
+    await userEvent.click(await screen.findByRole('tab', { name: /backports/i }));
+
+    const event = new Event('drop', { bubbles: true, cancelable: true });
+    Object.assign(event, {
+      dataTransfer: {
+        types: ['text/plain'],
+        getData: () => 'https://github.com/Graylog2/graylog2-server/pull/4821',
+      },
+    });
+    await act(async () => {
+      window.dispatchEvent(event);
+    });
+
+    expect(screen.getByRole('tab', { name: /board/i })).toHaveTextContent('0');
+    expect(storage.getItem(TRACKED_PRS_KEY)).toBeNull();
+    expect(fetchImpl).not.toHaveBeenCalled();
+  });
+
+  it('reports an unreadable stored backport-groups value without touching the board', async () => {
+    const storage = fakeStorage({
+      [TOKEN_KEY]: storedToken,
+      [TRACKED_PRS_KEY]: storedPrs(4821),
+      [BACKPORT_GROUPS_KEY]: 'not json{',
+    });
+    const fetchImpl = boardResponder({ pr0: prNode(4821) });
+    render(<App deps={{ fetchImpl, storage, clock, nowMs }} />);
+
+    expect(await screen.findByText('#4821')).toBeInTheDocument();
+    expect(screen.getByTestId('banner')).toHaveTextContent(/backport groups/i);
   });
 });

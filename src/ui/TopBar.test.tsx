@@ -57,4 +57,14 @@ describe('TopBar', () => {
     setup({ isPolling: true });
     expect(screen.getByRole('button', { name: /refresh/i })).toBeDisabled();
   });
+
+  it('uses a custom add-button label when given one, defaulting to "+ Add PR"', () => {
+    setup();
+    expect(screen.getByRole('button', { name: '+ Add PR' })).toBeInTheDocument();
+  });
+
+  it('shows the given addLabel', () => {
+    setup({ addLabel: '+ Track backports' });
+    expect(screen.getByRole('button', { name: '+ Track backports' })).toBeInTheDocument();
+  });
 });

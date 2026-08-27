@@ -1,15 +1,19 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { groupPrs } from '../domain/backports';
 import { formatAgo } from '../domain/formatAgo';
 import { prKey } from '../domain/prKey';
 import { groupIntoColumns } from '../domain/sort';
 import { fetchBoard } from '../github/client';
 import { parsePrUrl } from '../github/parseUrl';
+import { useBackportGroups } from '../hooks/useBackportGroups';
 import { useDragAndPaste } from '../hooks/useDragAndPaste';
 import { usePolling } from '../hooks/usePolling';
 import { useTrackedPrs } from '../hooks/useTrackedPrs';
 import { clearToken, loadToken, saveToken } from '../storage/token';
-import type { ColumnId, PrEntry, PrKey, RateLimit, TransportError } from '../types';
+import type { ColumnId, PrEntry, PrKey, RateLimit, TrackedPr, TransportError } from '../types';
+import { AddBackportGroupDialog } from './AddBackportGroupDialog';
 import { AddPrDialog } from './AddPrDialog';
+import { BackportsTab } from './BackportsTab';
 import { Banner } from './Banner';
 import { BoardTab } from './BoardTab';
 import { DropOverlay } from './DropOverlay';
@@ -17,6 +21,8 @@ import { Empty } from './Empty';
 import { GlobalStyle } from './GlobalStyle';
 import type { TokenValidator } from './SettingsDialog';
 import { SettingsDialog } from './SettingsDialog';
+import type { TabId } from './TabBar';
+import { TabBar } from './TabBar';
 import { TopBar } from './TopBar';
 
 export const POLL_INTERVAL_MS = 15000;
@@ -89,6 +95,31 @@ export function App({ deps = {} }: { deps?: AppDeps } = {}) {
   const { fetchImpl, storage, clock, nowMs = defaultNowMs, validate } = deps;
 
   const { prs, add, remove, storageError, dismissStorageError } = useTrackedPrs({ storage, clock });
+  const {
+    groups,
+    addGroup,
+    removeGroup,
+    addVersion,
+    removeVersion,
+    fillSlot,
+    storageError: backportStorageError,
+    dismissStorageError: dismissBackportStorageError,
+  } = useBackportGroups({ storage, clock });
+
+  // Both tabs are fed by one poll. Twenty PRs spread across board and backports
+  // still cost one GraphQL request, because the query batches by alias — see
+  // spec §9. Declared here, above `canPoll`, deliberately: `canPoll` and `poll`
+  // are defined further down but still *before* the other memos, so grouping
+  // this with `columns` would read `pollTargets` from its temporal dead zone —
+  // a render-time ReferenceError that tsc cannot see.
+  const pollTargets = useMemo(() => {
+    const byKey = new Map<PrKey, TrackedPr>();
+    for (const pr of prs) byKey.set(prKey(pr.owner, pr.repo, pr.number), pr);
+    for (const group of groups) {
+      for (const pr of groupPrs(group)) byKey.set(prKey(pr.owner, pr.repo, pr.number), pr);
+    }
+    return [...byKey.values()];
+  }, [prs, groups]);
 
   // Both halves of the load are used: an unreadable token is treated as absent
   // *and reported*, the same contract the tracked list already honours.
@@ -104,6 +135,8 @@ export function App({ deps = {} }: { deps?: AppDeps } = {}) {
   const [flashedKey, setFlashedKey] = useState<PrKey | null>(null);
   const [addOpen, setAddOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [activeTab, setActiveTab] = useState<TabId>('board');
+  const [backportDialogOpen, setBackportDialogOpen] = useState(false);
   const [tick, setTick] = useState(() => nowMs());
 
   // Kept together so the timestamp can never drift from the error it dates.
@@ -121,12 +154,12 @@ export function App({ deps = {} }: { deps?: AppDeps } = {}) {
   // manual Refresh button calls `poll` directly and must be gated too.
   const rateLimited = isRateLimitActive(transportError, errorAt, tick);
   const canPoll =
-    token !== null && prs.length > 0 && transportError?.kind !== 'auth' && !rateLimited;
+    token !== null && pollTargets.length > 0 && transportError?.kind !== 'auth' && !rateLimited;
 
   const poll = useCallback(async () => {
     if (!canPoll || token === null) return;
 
-    const outcome = await fetchBoard(token, prs, fetchImpl ? { fetchImpl } : {});
+    const outcome = await fetchBoard(token, pollTargets, fetchImpl ? { fetchImpl } : {});
     if (!outcome.ok) {
       // Deliberately does not clear `entries`: the last good board stays up.
       reportTransportError(outcome.error);
@@ -136,7 +169,7 @@ export function App({ deps = {} }: { deps?: AppDeps } = {}) {
     setEntries(outcome.result.entries);
     setRateLimit(outcome.result.rateLimit);
     setLastUpdatedAt(new Date(nowMs()).toISOString());
-  }, [canPoll, token, prs, fetchImpl, nowMs, reportTransportError]);
+  }, [canPoll, token, pollTargets, fetchImpl, nowMs, reportTransportError]);
 
   const { refresh, isPolling } = usePolling({
     enabled: canPoll,
@@ -144,7 +177,7 @@ export function App({ deps = {} }: { deps?: AppDeps } = {}) {
     poll,
   });
 
-  // Adding or removing a PR should not wait for the next tick.
+  // Adding or removing a PR — on either tab — should not wait for the next tick.
   const firstRun = useRef(true);
   useEffect(() => {
     if (firstRun.current) {
@@ -152,7 +185,7 @@ export function App({ deps = {} }: { deps?: AppDeps } = {}) {
       return;
     }
     if (canPoll) refresh();
-  }, [prs, canPoll, refresh]);
+  }, [pollTargets, canPoll, refresh]);
 
   // Drives the freshness label and the rate-limit backoff check.
   useEffect(() => {
@@ -176,6 +209,10 @@ export function App({ deps = {} }: { deps?: AppDeps } = {}) {
 
   const addFromText = useCallback(
     (text: string) => {
+      // Spec §10.4: on the Backports tab a dropped link has to land in a
+      // specific slot, so the window-wide "add to the board" path stands down.
+      // The listeners stay registered — only the behaviour is gated.
+      if (activeTab !== 'board') return;
       const parsed = parsePrUrl(text);
       if (!parsed.ok) {
         setInputError(parsed.error);
@@ -184,7 +221,7 @@ export function App({ deps = {} }: { deps?: AppDeps } = {}) {
       setInputError(null);
       addParsed(parsed.value);
     },
-    [addParsed],
+    [activeTab, addParsed],
   );
 
   const { isDragging } = useDragAndPaste(addFromText);
@@ -205,6 +242,8 @@ export function App({ deps = {} }: { deps?: AppDeps } = {}) {
     return groupIntoColumns(entries.filter((entry) => tracked.has(entry.key)));
   }, [entries, prs]);
 
+  const entryMap = useMemo(() => new Map(entries.map((entry) => [entry.key, entry])), [entries]);
+
   const freshness = useMemo(
     () =>
       lastUpdatedAt === null
@@ -220,7 +259,8 @@ export function App({ deps = {} }: { deps?: AppDeps } = {}) {
     <>
       <GlobalStyle />
       <TopBar
-        onAdd={() => setAddOpen(true)}
+        onAdd={() => (activeTab === 'board' ? setAddOpen(true) : setBackportDialogOpen(true))}
+        addLabel={activeTab === 'board' ? '+ Add PR' : '+ Track backports'}
         onRefresh={refresh}
         isPolling={isPolling}
         freshness={freshness}
@@ -231,6 +271,11 @@ export function App({ deps = {} }: { deps?: AppDeps } = {}) {
       {storageError === null ? null : (
         <Banner tone="warn" onDismiss={dismissStorageError}>
           {storageError}
+        </Banner>
+      )}
+      {backportStorageError === null ? null : (
+        <Banner tone="warn" onDismiss={dismissBackportStorageError}>
+          {backportStorageError}
         </Banner>
       )}
       {tokenError === null ? null : (
@@ -256,17 +301,44 @@ export function App({ deps = {} }: { deps?: AppDeps } = {}) {
 
       {token === null ? (
         <Empty>Add a GitHub token in settings to start tracking pull requests.</Empty>
-      ) : null}
-      {token !== null ? (
-        <BoardTab
-          columns={columns}
-          isEmpty={prs.length === 0}
-          flashedKey={flashedKey}
-          onRemove={handleRemove}
-        />
-      ) : null}
+      ) : (
+        <>
+          <TabBar
+            active={activeTab}
+            onChange={setActiveTab}
+            boardCount={prs.length}
+            backportsCount={groups.length}
+          />
+          {activeTab === 'board' ? (
+            <BoardTab
+              columns={columns}
+              isEmpty={prs.length === 0}
+              flashedKey={flashedKey}
+              onRemove={handleRemove}
+            />
+          ) : (
+            // `hasToken` is hardcoded because this whole branch is already
+            // inside `token === null ? ... :` — BackportsTab's own no-token
+            // empty state exists for its component tests, not for this call.
+            <BackportsTab
+              groups={groups}
+              entries={entryMap}
+              hasToken
+              onRemoveGroup={removeGroup}
+              onAddVersion={addVersion}
+              onRemoveVersion={removeVersion}
+              onFillSlot={fillSlot}
+            />
+          )}
+        </>
+      )}
 
       <AddPrDialog open={addOpen} onClose={() => setAddOpen(false)} onAdd={addParsed} />
+      <AddBackportGroupDialog
+        open={backportDialogOpen}
+        onClose={() => setBackportDialogOpen(false)}
+        onAdd={(main, versions) => addGroup(main, versions)}
+      />
       <SettingsDialog
         open={settingsOpen}
         onClose={() => setSettingsOpen(false)}
@@ -283,7 +355,7 @@ export function App({ deps = {} }: { deps?: AppDeps } = {}) {
           setToken(null);
         }}
       />
-      <DropOverlay visible={isDragging} />
+      <DropOverlay visible={isDragging && activeTab === 'board'} />
     </>
   );
 }

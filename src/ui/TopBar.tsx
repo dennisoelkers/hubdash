@@ -4,6 +4,8 @@ import { tokens } from './theme';
 
 export type TopBarProps = {
   onAdd: () => void;
+  /** Context-sensitive: the active tab decides what the add button offers. */
+  addLabel?: string;
   onRefresh: () => void;
   isPolling: boolean;
   freshness: { label: string; stale: boolean } | null;
@@ -64,6 +66,7 @@ const Button = styled.button`
 
 export function TopBar({
   onAdd,
+  addLabel = '+ Add PR',
   onRefresh,
   isPolling,
   freshness,
@@ -74,7 +77,7 @@ export function TopBar({
     <Wrapper>
       <Brand>hubdash</Brand>
       <Button type="button" onClick={onAdd}>
-        + Add PR
+        {addLabel}
       </Button>
       <Spacer />
       <Muted data-testid="freshness" data-stale={freshness?.stale ? 'true' : 'false'}>
