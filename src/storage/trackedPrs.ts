@@ -8,7 +8,7 @@ const VERSION = 1;
 
 export type LoadTrackedPrsResult = { prs: TrackedPr[]; error: string | null };
 
-function isTrackedPr(value: unknown): value is TrackedPr {
+export function isTrackedPr(value: unknown): value is TrackedPr {
   if (typeof value !== 'object' || value === null) return false;
   const candidate = value as Record<string, unknown>;
   return (
