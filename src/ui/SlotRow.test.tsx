@@ -116,6 +116,68 @@ describe('SlotRow — filling by click-to-paste', () => {
     await userEvent.type(input, 'https://github.com/Graylog2/graylog2-server/pull/4839{Enter}');
     expect(onFill).toHaveBeenCalledWith({ owner: 'Graylog2', repo: 'graylog2-server', number: 4839 });
   });
+
+  it('labels the toggle for what it actually does', () => {
+    const { rerender } = render(
+      <SlotRow slot={EMPTY} entries={new Map()} onFill={() => ({ ok: true })} onRemoveVersion={() => {}} />,
+    );
+    expect(screen.getByRole('button', { name: 'Add a link' })).toHaveTextContent('+ link');
+    rerender(
+      <SlotRow slot={FILLED} entries={new Map()} onFill={() => ({ ok: true })} onRemoveVersion={() => {}} />,
+    );
+    expect(screen.getByRole('button', { name: 'Replace the link' })).toHaveTextContent('replace');
+  });
+
+  it('closes the editor again without filling anything', async () => {
+    const onFill = vi.fn();
+    render(<SlotRow slot={EMPTY} entries={new Map()} onFill={onFill} onRemoveVersion={() => {}} />);
+    await userEvent.click(screen.getByRole('button', { name: /add a link/i }));
+    await userEvent.type(screen.getByLabelText(/pull request url/i), 'half a url');
+
+    await userEvent.click(screen.getByRole('button', { name: /cancel/i }));
+    expect(screen.queryByLabelText(/pull request url/i)).not.toBeInTheDocument();
+    expect(onFill).not.toHaveBeenCalled();
+    expect(screen.getByRole('button', { name: 'Add a link' })).toBeInTheDocument();
+  });
+
+  it('closes the editor on Escape too', async () => {
+    render(<SlotRow slot={EMPTY} entries={new Map()} onFill={() => ({ ok: true })} onRemoveVersion={() => {}} />);
+    await userEvent.click(screen.getByRole('button', { name: /add a link/i }));
+    await userEvent.type(screen.getByLabelText(/pull request url/i), '{Escape}');
+    expect(screen.queryByLabelText(/pull request url/i)).not.toBeInTheDocument();
+  });
+
+  it('forgets a shown error once the user edits the URL again', async () => {
+    render(<SlotRow slot={EMPTY} entries={new Map()} onFill={() => ({ ok: true })} onRemoveVersion={() => {}} />);
+    await userEvent.click(screen.getByRole('button', { name: /add a link/i }));
+    const input = screen.getByLabelText(/pull request url/i);
+    await userEvent.type(input, 'https://gitlab.com/a/b/pull/1{Enter}');
+    expect(screen.getByRole('alert')).toBeInTheDocument();
+
+    await userEvent.type(input, '2');
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+  });
+
+  it('forgets a shown error when the slot fills from somewhere else', () => {
+    const { rerender } = render(
+      <SlotRow slot={EMPTY} entries={new Map()} onFill={() => ({ ok: true })} onRemoveVersion={() => {}} />,
+    );
+    const row = screen.getByTestId('slot-row');
+    const event = new Event('drop', { bubbles: true, cancelable: true });
+    Object.assign(event, { dataTransfer: dataTransfer('https://gitlab.com/a/b/pull/1') });
+    act(() => void row.dispatchEvent(event));
+    expect(screen.getByRole('alert')).toBeInTheDocument();
+
+    rerender(
+      <SlotRow
+        slot={{ version: '6.0', pr: tracked(4839) }}
+        entries={new Map()}
+        onFill={() => ({ ok: true })}
+        onRemoveVersion={() => {}}
+      />,
+    );
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+  });
 });
 
 describe('SlotRow — removing a version', () => {

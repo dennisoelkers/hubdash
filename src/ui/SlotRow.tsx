@@ -1,4 +1,4 @@
-import { useId, useState } from 'react';
+import { useEffect, useId, useState } from 'react';
 import styled from 'styled-components';
 import { slotStateFor } from '../domain/backports';
 import { textFrom } from '../domain/dropText';
@@ -107,6 +107,20 @@ export function SlotRow({ slot, entries, onFill, onRemoveVersion }: SlotRowProps
   const [value, setValue] = useState('');
   const inputId = useId();
 
+  // A rejection message is about the URL that was offered, so it stops being
+  // true the moment the slot's PR changes out from under it — a drop that landed
+  // here from elsewhere, or a replacement. Without this the message sits under a
+  // row it no longer describes.
+  useEffect(() => {
+    setError(null);
+  }, [slot.pr]);
+
+  const closeEditor = () => {
+    setEditing(false);
+    setValue('');
+    setError(null);
+  };
+
   const fill = (raw: string) => {
     const parsed = parsePrUrl(raw);
     if (!parsed.ok) {
@@ -118,9 +132,7 @@ export function SlotRow({ slot, entries, onFill, onRemoveVersion }: SlotRowProps
       setError(outcome.error);
       return;
     }
-    setError(null);
-    setEditing(false);
-    setValue('');
+    closeEditor();
   };
 
   const status = statusOf(slot, entries);
@@ -152,11 +164,17 @@ export function SlotRow({ slot, entries, onFill, onRemoveVersion }: SlotRowProps
           <Status $tone={status.tone}>{status.label}</Status>
         )}
         <Spacer />
-        {editing ? null : (
-          <IconButton type="button" aria-label="Add a link" onClick={() => setEditing(true)}>
-            {slot.pr === null ? '+ link' : 'replace'}
-          </IconButton>
-        )}
+        {/* Stays mounted while editing, relabelled: unmounting it left an
+            accidentally-opened editor with no way out short of deleting the
+            whole version slot. The label tracks the action rather than the
+            state, so a screen reader hears what the button will do. */}
+        <IconButton
+          type="button"
+          aria-label={editing ? 'Cancel' : slot.pr === null ? 'Add a link' : 'Replace the link'}
+          onClick={() => (editing ? closeEditor() : setEditing(true))}
+        >
+          {editing ? 'cancel' : slot.pr === null ? '+ link' : 'replace'}
+        </IconButton>
         <IconButton
           type="button"
           aria-label={`Remove ${slot.version}`}
@@ -174,7 +192,13 @@ export function SlotRow({ slot, entries, onFill, onRemoveVersion }: SlotRowProps
             id={inputId}
             autoFocus
             value={value}
-            onChange={(event) => setValue(event.target.value)}
+            onChange={(event) => {
+              setValue(event.target.value);
+              setError(null);
+            }}
+            onKeyDown={(event) => {
+              if (event.key === 'Escape') closeEditor();
+            }}
             placeholder="https://github.com/owner/repo/pull/123"
           />
         </Row>
