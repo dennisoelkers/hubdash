@@ -370,9 +370,13 @@ describe('rollUpFor', () => {
   });
 
   it('excludes the main PR from both numbers', () => {
-    // Main is the thing being backported, not a backport.
+    // Main is the thing being backported, not a backport. The default fixture
+    // has one null (6.0) slot, so even with main merged, at most 2 of its 3
+    // slots can resolve to merged — {2,3}, never {3,3} or {3,4}. A buggy
+    // implementation that folded main into either count would report a
+    // different pair than this.
     const roll = rollUpFor(group(), entryMap([4821, 'MERGED'], [4840, 'MERGED'], [4841, 'MERGED']));
-    expect(roll).toEqual({ landed: 3, total: 3 });
+    expect(roll).toEqual({ landed: 2, total: 3 });
   });
 
   it('counts an empty, pending, closed or errored slot toward the total but not landed', () => {
