@@ -1,4 +1,5 @@
 import type { TrackedPr } from '../types';
+import { readKey, writeKey } from './localStorage';
 
 export const TRACKED_PRS_KEY = 'hubdash.prs';
 export const CORRUPT_TRACKED_PRS_KEY = 'hubdash.prs.corrupt';
@@ -6,39 +7,6 @@ export const CORRUPT_TRACKED_PRS_KEY = 'hubdash.prs.corrupt';
 const VERSION = 1;
 
 export type LoadTrackedPrsResult = { prs: TrackedPr[]; error: string | null };
-
-/**
- * `localStorage` access can throw outright (Safari private browsing, browsers
- * configured to block site data), so every use goes through here.
- */
-export function defaultStorage(): Storage | null {
-  try {
-    return window.localStorage;
-  } catch {
-    return null;
-  }
-}
-
-function read(storage: Storage | null | undefined, key: string): string | null {
-  const target = storage === undefined ? defaultStorage() : storage;
-  if (!target) return null;
-  try {
-    return target.getItem(key);
-  } catch {
-    return null;
-  }
-}
-
-function write(storage: Storage | null | undefined, key: string, value: string): void {
-  const target = storage === undefined ? defaultStorage() : storage;
-  if (!target) return;
-  try {
-    target.setItem(key, value);
-  } catch {
-    // Quota exhausted or storage blocked. Losing persistence is survivable;
-    // throwing into a render is not.
-  }
-}
 
 function isTrackedPr(value: unknown): value is TrackedPr {
   if (typeof value !== 'object' || value === null) return false;
@@ -62,12 +30,12 @@ function reject(
   error: string,
 ): LoadTrackedPrsResult {
   // Keep the unusable value so a later save cannot destroy the user's list.
-  write(storage, CORRUPT_TRACKED_PRS_KEY, raw);
+  writeKey(storage, CORRUPT_TRACKED_PRS_KEY, raw);
   return { prs: [], error };
 }
 
 export function loadTrackedPrs(storage?: Storage | null): LoadTrackedPrsResult {
-  const raw = read(storage, TRACKED_PRS_KEY);
+  const raw = readKey(storage, TRACKED_PRS_KEY);
   if (raw === null) return { prs: [], error: null };
 
   let parsed: unknown;
@@ -102,5 +70,5 @@ export function loadTrackedPrs(storage?: Storage | null): LoadTrackedPrsResult {
 }
 
 export function saveTrackedPrs(prs: TrackedPr[], storage?: Storage | null): void {
-  write(storage, TRACKED_PRS_KEY, JSON.stringify({ version: VERSION, prs }));
+  writeKey(storage, TRACKED_PRS_KEY, JSON.stringify({ version: VERSION, prs }));
 }

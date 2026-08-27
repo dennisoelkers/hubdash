@@ -1,4 +1,4 @@
-import { defaultStorage } from './trackedPrs';
+import { readKey, removeKey, writeKey } from './localStorage';
 
 export const TOKEN_KEY = 'hubdash.token';
 
@@ -6,20 +6,8 @@ const VERSION = 1;
 
 export type LoadTokenResult = { token: string | null; error: string | null };
 
-function resolve(storage: Storage | null | undefined): Storage | null {
-  return storage === undefined ? defaultStorage() : storage;
-}
-
 export function loadToken(storage?: Storage | null): LoadTokenResult {
-  const target = resolve(storage);
-  if (!target) return { token: null, error: null };
-
-  let raw: string | null;
-  try {
-    raw = target.getItem(TOKEN_KEY);
-  } catch {
-    return { token: null, error: null };
-  }
+  const raw = readKey(storage, TOKEN_KEY);
   if (raw === null) return { token: null, error: null };
 
   const invalid = { token: null, error: 'Your saved token could not be read. Enter it again.' };
@@ -41,21 +29,9 @@ export function loadToken(storage?: Storage | null): LoadTokenResult {
 }
 
 export function saveToken(token: string, storage?: Storage | null): void {
-  const target = resolve(storage);
-  if (!target) return;
-  try {
-    target.setItem(TOKEN_KEY, JSON.stringify({ version: VERSION, token }));
-  } catch {
-    // See saveTrackedPrs: failing to persist must not break the app.
-  }
+  writeKey(storage, TOKEN_KEY, JSON.stringify({ version: VERSION, token }));
 }
 
 export function clearToken(storage?: Storage | null): void {
-  const target = resolve(storage);
-  if (!target) return;
-  try {
-    target.removeItem(TOKEN_KEY);
-  } catch {
-    // Nothing useful to do.
-  }
+  removeKey(storage, TOKEN_KEY);
 }
