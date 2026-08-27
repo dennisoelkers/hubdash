@@ -352,7 +352,7 @@ Failures are handled at the granularity at which they occur.
 | ------- | --------- |
 | Network error or 5xx | Keep the last good board on screen. The freshness indicator turns amber and reads "last updated Ns ago". Retry on the next tick. |
 | `401` / `403` from bad credentials | Persistent banner: the token is invalid or expired, with a link to the settings dialog. Polling stops until the token changes. |
-| Rate limit exhausted | Banner naming the reset time from `rateLimit.resetAt`. Polling backs off until then. |
+| Rate limit exhausted | Banner naming the reset time from the `x-ratelimit-reset` response header. Polling backs off until then, or for a bounded fallback if the header is absent. |
 | One aliased PR errors (deleted, renamed, or no access) | GraphQL returns partial data with an `errors` array. The other PRs render normally; that one card renders in an error state with the reason and its remove control. |
 | Malformed `localStorage` | Treated as absent, replaced with the default, reported once. |
 
@@ -442,3 +442,33 @@ Recorded so they are not silently forgotten:
   and a more accurate Ready rule, at the cost of fetching branch protection.
 - **Auto-discovery** of PRs by search, which would remove manual adding but
   changes the app's premise from a curated board to a feed.
+
+## 13. Known follow-ups
+
+Found by the final review and deliberately not fixed in the first version.
+Recorded here because they are the durable record once the build workspace is
+gone.
+
+- **The reset time comes from the header, not the GraphQL field.** §9 originally
+  named `rateLimit.resetAt`. That object only appears on a *successful*
+  response, so it is precisely unavailable when the limit is hit; the
+  implementation reads `x-ratelimit-reset` instead. §9 above now says so.
+- **A shared dialog shell.** `AddPrDialog` and `SettingsDialog` carry ~90
+  near-identical lines — backdrop, panel, label, input, actions, plus the same
+  Escape and reset-on-close effects. Not extracted during the build because the
+  moment to do it was after the last review, and one of the two contains a
+  consent-critical cancellation guard.
+- **A duplicate poll on each `canPoll` false→true transition.** When polling
+  becomes possible again — token saved, first PR added, rate limit expired —
+  two effects fire on the same commit and the second coalesces into one
+  redundant follow-up request. User-paced and rare; one wasted request each.
+- **`ArchiveSection` does not forward `flashedKey`.** Re-adding an already
+  archived PR gives no feedback — no flash, no scroll — but only while the
+  archive is expanded. Narrow, not unobservable.
+- **`loadToken` reports a corrupt value without clearing it**, unlike
+  `loadTrackedPrs`, which preserves the bad blob under `hubdash.prs.corrupt`
+  and moves on. The token has no default to write, so the bad value survives
+  reloads and is re-reported each time.
+- **The default clock in `App` has no test.** `defaultNowMs` is module-scoped so
+  its identity is stable, but every test injects `nowMs`, so a regression to a
+  per-render function would be silent.
