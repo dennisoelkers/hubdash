@@ -457,11 +457,26 @@ gone.
   named `rateLimit.resetAt`. That object only appears on a *successful*
   response, so it is precisely unavailable when the limit is hit; the
   implementation reads `x-ratelimit-reset` instead. §9 above now says so.
-- **A shared dialog shell.** `AddPrDialog` and `SettingsDialog` carry ~90
-  near-identical lines — backdrop, panel, label, input, actions, plus the same
-  Escape and reset-on-close effects. Not extracted during the build because the
-  moment to do it was after the last review, and one of the two contains a
+- **A shared dialog shell.** There are now three: `AddPrDialog`,
+  `SettingsDialog` and `AddBackportGroupDialog`, each carrying ~73 lines of the
+  same styled-component vocabulary — backdrop, panel, label, input, actions,
+  eight components confirmed byte-identical across all three — plus the same
+  Escape and reset-on-close effects. Still not extracted, for the reason that
+  has held twice: the moment to do it is after the last review, not right after
+  it with no further review wave, and one of the three contains a
   consent-critical cancellation guard.
+- **A generic `usePersistedList<T>` and `loadEnvelope(...)`.** `useBackportGroups`
+  and `useTrackedPrs` are now structurally near-identical — the same
+  `initial`-ref → `useState` → ref-mirror → `commit` → `dismissStorageError`
+  prologue — and so are their loaders, `loadBackportGroups` and
+  `loadTrackedPrs`: read → parse → shape-guard → version-check → array-validate
+  → reject with a `.corrupt` backup. One generic hook and one generic loader
+  would collapse both pairs. Deferred for exactly the reason above: extracting
+  either immediately after a final review, with no further review wave to catch
+  a mistake, is the same risk this project has already declined twice for the
+  dialog shell. **This is the top follow-up candidate for a future dedicated
+  pass** — it is the largest duplication left, and it sits under persistence,
+  where a silent mistake costs the user their tracked list.
 - **A duplicate poll on each `canPoll` false→true transition.** When polling
   becomes possible again — token saved, first PR added, rate limit expired —
   two effects fire on the same commit and the second coalesces into one
