@@ -184,7 +184,7 @@ export function BackportGroupCard({
         </NumberLink>
         <Title>{mainTitle}</Title>
         <RollUp>{`${landed} of ${total} landed`}</RollUp>
-        {isComplete(group, entries) ? (
+        {!group.archived && isComplete(group, entries) ? (
           <ArchiveButton type="button" onClick={onArchiveGroup}>
             Archive
           </ArchiveButton>

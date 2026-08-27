@@ -128,4 +128,26 @@ describe('BackportGroupArchiveSection via BackportsTab', () => {
     await userEvent.click(screen.getByRole('button', { name: /^archive$/i }));
     expect(onArchiveGroup).toHaveBeenCalledWith('graylog2/graylog2-server#4821');
   });
+
+  it('does not show a per-card Archive button on an archived group once expanded', async () => {
+    const { default: userEvent } = await import('@testing-library/user-event');
+    const groups = [
+      group(4821, '2026-08-20T00:00:00Z', {
+        archived: true,
+        slots: [{ version: '6.2', pr: tracked(4840) }],
+      }),
+    ];
+    const entries = entryMap([4821, 'MERGED'], [4840, 'MERGED']);
+    render(<BackportsTab {...baseProps({ groups, entries })} />);
+    await userEvent.click(screen.getByRole('button', { name: /archive/i }));
+    // Only the section's own toggle should match now — no per-card button.
+    expect(screen.getAllByRole('button', { name: /archive/i })).toHaveLength(1);
+  });
+
+  it('auto-expands the archive section when the flashed group is archived', () => {
+    const groups = [group(4821, '2026-08-20T00:00:00Z', { archived: true })];
+    render(<BackportsTab {...baseProps({ groups, flashedKey: 'graylog2/graylog2-server#4821' })} />);
+    expect(screen.getByRole('button', { name: /archive/i })).toHaveAttribute('aria-expanded', 'true');
+    expect(screen.getByText('#4821')).toBeInTheDocument();
+  });
 });

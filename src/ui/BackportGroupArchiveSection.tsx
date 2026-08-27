@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import styled from 'styled-components';
 import { groupKey } from '../domain/backports';
 import type { ParsedPr } from '../github/parseUrl';
@@ -61,6 +61,16 @@ export function BackportGroupArchiveSection({
   onArchiveGroup,
 }: BackportGroupArchiveSectionProps) {
   const [expanded, setExpanded] = useState(false);
+
+  // Spec round 2 gap found in final review: a duplicate-add flash on an
+  // already-archived group would otherwise be invisible inside a collapsed
+  // section. Once revealed, stays revealed — snapping shut when the flash
+  // times out 1.5s later would be worse than not revealing it at all.
+  useEffect(() => {
+    if (flashedKey !== null && groups.some((group) => groupKey(group) === flashedKey)) {
+      setExpanded(true);
+    }
+  }, [flashedKey, groups]);
 
   if (groups.length === 0) return null;
 

@@ -221,4 +221,12 @@ describe('BackportGroupCard — archiving', () => {
     await userEvent.click(screen.getByRole('button', { name: /^archive$/i }));
     expect(onArchiveGroup).toHaveBeenCalled();
   });
+
+  it('does not show the Archive button on an already-archived group', () => {
+    setup({
+      group: group({ archived: true, slots: [{ version: '6.2', pr: tracked(4840) }] }),
+      entries: entryMap([4821, 'MERGED'], [4840, 'MERGED']),
+    });
+    expect(screen.queryByRole('button', { name: /^archive$/i })).not.toBeInTheDocument();
+  });
 });

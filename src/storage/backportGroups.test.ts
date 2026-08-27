@@ -125,7 +125,16 @@ describe('loadBackportGroups', () => {
 
   it('rejects a version-2 group missing archived', () => {
     const bad = { main: group.main, slots: group.slots, addedAt: group.addedAt };
-    expect(loadBackportGroups(fakeStorage(stored([bad], 2))).error).toBeTruthy();
+    const result = loadBackportGroups(fakeStorage(stored([bad], 2)));
+    expect(result.groups).toEqual([]);
+    expect(result.error).toBeTruthy();
+  });
+
+  it('rejects a version-1 payload whose groups do not match the legacy shape', () => {
+    const bad = { main: { owner: 'a', repo: 'b', number: 0, addedAt: 'x' }, slots: [], addedAt: '2026-08-01T00:00:00Z' };
+    const result = loadBackportGroups(fakeStorage(stored([bad], 1)));
+    expect(result.groups).toEqual([]);
+    expect(result.error).toBeTruthy();
   });
 
   it('rejects a version below 1 or above 2', () => {
