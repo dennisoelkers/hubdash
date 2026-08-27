@@ -1926,7 +1926,7 @@ Only the visible symbols differ per state: `empty` shows the drop invitation, `p
 `src/ui/SlotRow.test.tsx`:
 
 ```tsx
-import { render, screen } from '@testing-library/react';
+import { act, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 import { makePr } from '../test/makePr';
@@ -2002,7 +2002,7 @@ describe('SlotRow — filling by drop', () => {
     const row = screen.getByTestId('slot-row');
     const event = new Event('drop', { bubbles: true, cancelable: true });
     Object.assign(event, { dataTransfer: dataTransfer('https://github.com/Graylog2/graylog2-server/pull/4839') });
-    row.dispatchEvent(event);
+    act(() => void row.dispatchEvent(event));
     expect(onFill).toHaveBeenCalledWith({ owner: 'Graylog2', repo: 'graylog2-server', number: 4839 });
   });
 
@@ -2012,7 +2012,7 @@ describe('SlotRow — filling by drop', () => {
     const row = screen.getByTestId('slot-row');
     const event = new Event('drop', { bubbles: true, cancelable: true });
     Object.assign(event, { dataTransfer: dataTransfer('https://gitlab.com/a/b/pull/1') });
-    row.dispatchEvent(event);
+    act(() => void row.dispatchEvent(event));
     expect(onFill).not.toHaveBeenCalled();
     expect(screen.getByRole('alert')).toHaveTextContent(/github\.com/i);
   });
@@ -2023,7 +2023,7 @@ describe('SlotRow — filling by drop', () => {
     const row = screen.getByTestId('slot-row');
     const event = new Event('drop', { bubbles: true, cancelable: true });
     Object.assign(event, { dataTransfer: dataTransfer('https://github.com/Graylog2/graylog2-server/pull/4840') });
-    row.dispatchEvent(event);
+    act(() => void row.dispatchEvent(event));
     expect(screen.getByRole('alert')).toHaveTextContent(/6\.1 slot/);
   });
 
@@ -2262,7 +2262,7 @@ npm run typecheck
 npx vitest run
 ```
 
-Expected: 12 new tests pass; **333** passing overall; output pristine.
+Expected: 11 new tests pass; **332** passing overall; output pristine.
 
 - [ ] **Step 5: Commit**
 
@@ -2612,7 +2612,7 @@ npm run typecheck
 npx vitest run
 ```
 
-Expected: 12 new tests pass; **345** passing overall; output pristine.
+Expected: 12 new tests pass; **344** passing overall; output pristine.
 
 - [ ] **Step 5: Commit**
 
@@ -2910,7 +2910,7 @@ npm run typecheck
 npx vitest run
 ```
 
-Expected: 7 new tests pass; **352** passing overall.
+Expected: 7 new tests pass; **351** passing overall.
 
 - [ ] **Step 5: Commit**
 
@@ -3088,7 +3088,7 @@ npm run typecheck
 npx vitest run
 ```
 
-Expected: 4 new tests pass; **356** passing overall.
+Expected: 4 new tests pass; **355** passing overall.
 
 - [ ] **Step 5: Commit**
 
@@ -3219,7 +3219,7 @@ npm run typecheck
 npx vitest run
 ```
 
-Expected: 3 new tests pass; **359** passing overall.
+Expected: 3 new tests pass; **358** passing overall.
 
 - [ ] **Step 5: Commit**
 
@@ -3553,7 +3553,7 @@ npm run build
 npx vitest run
 ```
 
-Expected: every existing `App.test.tsx` test still passes, unaltered; 6 new App-level tests pass; `TopBar.test.tsx` shows 5 passing (3 existing + 2 new); typecheck and build clean; full suite **367** — the 359 baseline from Task 12, plus 2 new `TopBar` tests, plus 6 new `App` tests.
+Expected: every existing `App.test.tsx` test still passes, unaltered; 6 new App-level tests pass; `TopBar.test.tsx` shows 5 passing (3 existing + 2 new); typecheck and build clean; full suite **366** — the 358 baseline from Task 12, plus 2 new `TopBar` tests, plus 6 new `App` tests.
 
 - [ ] **Step 6: Manual verification against real GitHub**
 
