@@ -110,11 +110,11 @@ describe('usePolling', () => {
   });
 
   it('does not start a second poll while one is in flight', async () => {
-    let release: (() => void) | undefined;
+    const releases: Array<() => void> = [];
     const poll = vi.fn().mockImplementation(
       () =>
         new Promise<void>((resolve) => {
-          release = resolve;
+          releases.push(resolve);
         }),
     );
     const { result } = renderHook(() => usePolling({ enabled: true, intervalMs: 15000, poll }));
@@ -126,10 +126,91 @@ describe('usePolling', () => {
     expect(poll).toHaveBeenCalledTimes(1);
 
     await act(async () => {
-      release?.();
+      releases[0]?.();
     });
-    act(() => result.current.refresh());
+    // One follow-up for the two blocked calls, and it starts only once the
+    // first has finished — never two at the same time.
     expect(poll).toHaveBeenCalledTimes(2);
+  });
+
+  it('runs a poll blocked by the guard once the in-flight one finishes', async () => {
+    const releases: Array<() => void> = [];
+    const poll = vi.fn().mockImplementation(
+      () => new Promise<void>((resolve) => { releases.push(resolve); }),
+    );
+    const { result } = renderHook(() => usePolling({ enabled: true, intervalMs: 15000, poll }));
+    expect(poll).toHaveBeenCalledTimes(1);
+
+    // This is the shape of App's "the tracked list changed" refresh: dropping it
+    // leaves a just-added PR invisible until the next tick, because the board
+    // renders only from the last poll's entries.
+    act(() => result.current.refresh());
+    expect(poll).toHaveBeenCalledTimes(1);
+
+    await act(async () => {
+      releases[0]?.();
+    });
+    expect(poll).toHaveBeenCalledTimes(2);
+
+    // The follow-up is drained, not sticky: finishing it starts nothing more.
+    await act(async () => {
+      releases[1]?.();
+    });
+    expect(poll).toHaveBeenCalledTimes(2);
+  });
+
+  it('coalesces any number of blocked calls into exactly one follow-up', async () => {
+    const releases: Array<() => void> = [];
+    const poll = vi.fn().mockImplementation(
+      () => new Promise<void>((resolve) => { releases.push(resolve); }),
+    );
+    const { result } = renderHook(() => usePolling({ enabled: true, intervalMs: 15000, poll }));
+
+    act(() => result.current.refresh());
+    act(() => result.current.refresh());
+    act(() => result.current.refresh());
+    act(() => void vi.advanceTimersByTime(15000));
+    expect(poll).toHaveBeenCalledTimes(1);
+
+    await act(async () => {
+      releases[0]?.();
+    });
+    expect(poll).toHaveBeenCalledTimes(2);
+
+    await act(async () => {
+      releases[1]?.();
+    });
+    expect(poll).toHaveBeenCalledTimes(2);
+  });
+
+  it('never has two polls running at the same time', async () => {
+    let concurrent = 0;
+    let peak = 0;
+    const releases: Array<() => void> = [];
+    const poll = vi.fn().mockImplementation(() => {
+      concurrent += 1;
+      peak = Math.max(peak, concurrent);
+      return new Promise<void>((resolve) => {
+        releases.push(() => {
+          concurrent -= 1;
+          resolve();
+        });
+      });
+    });
+    const { result } = renderHook(() => usePolling({ enabled: true, intervalMs: 15000, poll }));
+
+    for (let index = 0; index < 5; index += 1) {
+      act(() => result.current.refresh());
+      act(() => void vi.advanceTimersByTime(15000));
+    }
+    // Drain everything the hook queued, releasing each poll in turn.
+    for (let index = 0; index < 5; index += 1) {
+      await act(async () => {
+        releases[index]?.();
+      });
+    }
+
+    expect(peak).toBe(1);
   });
 
   it('reports whether a poll is in flight', async () => {

@@ -155,6 +155,40 @@ describe('App — the board', () => {
     expect(JSON.parse(storage.getItem(TRACKED_PRS_KEY) ?? '').prs).toHaveLength(1);
   });
 
+  it('shows a PR added while a poll is in flight, without waiting for the next tick', async () => {
+    const responder = boardResponder({ pr0: prNode(4821), pr1: prNode(4790) });
+    let releaseFirst: (() => void) | undefined;
+    const fetchImpl = vi
+      .fn()
+      .mockImplementationOnce(async (url: string, init?: RequestInit) => {
+        await new Promise<void>((resolve) => {
+          releaseFirst = resolve;
+        });
+        return responder(url, init);
+      })
+      .mockImplementation(responder);
+    const storage = fakeStorage({ [TOKEN_KEY]: storedToken, [TRACKED_PRS_KEY]: storedPrs(4821) });
+    render(<App deps={{ fetchImpl, storage, clock, nowMs }} />);
+
+    // The mount poll is still open; it was built before #4790 existed, so only
+    // a second request can ever produce that card.
+    await waitFor(() => expect(fetchImpl).toHaveBeenCalledTimes(1));
+
+    await userEvent.click(screen.getByRole('button', { name: /add pr/i }));
+    await userEvent.type(
+      screen.getByLabelText(/pull request url/i),
+      'https://github.com/Graylog2/graylog2-server/pull/4790',
+    );
+    await userEvent.click(screen.getByRole('button', { name: /^add$/i }));
+
+    await act(async () => {
+      releaseFirst?.();
+    });
+
+    expect(await screen.findByText('#4790')).toBeInTheDocument();
+    expect(screen.getByText('#4821')).toBeInTheDocument();
+  });
+
   it('removes a PR from the board and from storage', async () => {
     const fetchImpl = boardResponder({ pr0: prNode(4821) });
     const storage = fakeStorage({ [TOKEN_KEY]: storedToken, [TRACKED_PRS_KEY]: storedPrs(4821) });
