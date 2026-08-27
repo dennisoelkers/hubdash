@@ -1,5 +1,4 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import styled from 'styled-components';
 import { formatAgo } from '../domain/formatAgo';
 import { prKey } from '../domain/prKey';
 import { groupIntoColumns } from '../domain/sort';
@@ -12,13 +11,13 @@ import { clearToken, loadToken, saveToken } from '../storage/token';
 import type { ColumnId, PrEntry, PrKey, RateLimit, TransportError } from '../types';
 import { AddPrDialog } from './AddPrDialog';
 import { Banner } from './Banner';
-import { Board } from './Board';
+import { BoardTab } from './BoardTab';
 import { DropOverlay } from './DropOverlay';
+import { Empty } from './Empty';
 import { GlobalStyle } from './GlobalStyle';
 import type { TokenValidator } from './SettingsDialog';
 import { SettingsDialog } from './SettingsDialog';
 import { TopBar } from './TopBar';
-import { tokens } from './theme';
 
 export const POLL_INTERVAL_MS = 15000;
 const FLASH_MS = 1500;
@@ -78,13 +77,6 @@ function bannerText(error: TransportError): string {
     ? `${error.message} Polling resumes shortly.`
     : `${error.message} Polling resumes at ${new Date(resetMs).toLocaleTimeString()}.`;
 }
-
-const Empty = styled.div`
-  padding: ${tokens.space(12)} ${tokens.space(5)};
-  text-align: center;
-  color: ${tokens.color.textMuted};
-  font-family: ${tokens.font.body};
-`;
 
 const EMPTY_COLUMNS: Record<ColumnId, PrEntry[]> = {
   waiting: [],
@@ -224,8 +216,6 @@ export function App({ deps = {} }: { deps?: AppDeps } = {}) {
     [lastUpdatedAt, tick],
   );
 
-  const showBoard = token !== null && prs.length > 0;
-
   return (
     <>
       <GlobalStyle />
@@ -267,11 +257,13 @@ export function App({ deps = {} }: { deps?: AppDeps } = {}) {
       {token === null ? (
         <Empty>Add a GitHub token in settings to start tracking pull requests.</Empty>
       ) : null}
-      {token !== null && prs.length === 0 ? (
-        <Empty>Add a pull request — use the button, paste a URL, or drop a link here.</Empty>
-      ) : null}
-      {showBoard ? (
-        <Board columns={columns} onRemove={handleRemove} flashedKey={flashedKey} />
+      {token !== null ? (
+        <BoardTab
+          columns={columns}
+          isEmpty={prs.length === 0}
+          flashedKey={flashedKey}
+          onRemove={handleRemove}
+        />
       ) : null}
 
       <AddPrDialog open={addOpen} onClose={() => setAddOpen(false)} onAdd={addParsed} />
