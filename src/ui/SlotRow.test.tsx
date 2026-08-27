@@ -105,6 +105,22 @@ describe('SlotRow — filling by drop', () => {
     screen.getByTestId('slot-row').dispatchEvent(event);
     expect(event.defaultPrevented).toBe(true);
   });
+
+  it('stops the drop event from reaching the window', () => {
+    const onFill = vi.fn().mockReturnValue({ ok: true });
+    render(<SlotRow slot={EMPTY} entries={new Map()} onFill={onFill} onRemoveVersion={() => {}} />);
+    const windowListener = vi.fn();
+    window.addEventListener('drop', windowListener);
+    try {
+      const row = screen.getByTestId('slot-row');
+      const event = new Event('drop', { bubbles: true, cancelable: true });
+      Object.assign(event, { dataTransfer: dataTransfer('https://github.com/Graylog2/graylog2-server/pull/4839') });
+      act(() => void row.dispatchEvent(event));
+      expect(windowListener).not.toHaveBeenCalled();
+    } finally {
+      window.removeEventListener('drop', windowListener);
+    }
+  });
 });
 
 describe('SlotRow — filling by click-to-paste', () => {

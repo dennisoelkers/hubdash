@@ -144,6 +144,7 @@ export function SlotRow({ slot, entries, onFill, onRemoveVersion }: SlotRowProps
         onDragOver={(event) => event.preventDefault()}
         onDrop={(event) => {
           event.preventDefault();
+          event.stopPropagation();
           const text = textFrom(event.dataTransfer);
           if (text !== '') fill(text);
         }}
