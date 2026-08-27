@@ -76,6 +76,54 @@ describe('PrCard — a resolved PR', () => {
   });
 });
 
+describe('PrCard — flashing a duplicate', () => {
+  /**
+   * jsdom implements no layout, so `scrollIntoView` is simply absent from
+   * HTMLElement — which is exactly why the component has to guard the call, and
+   * why a test that wants to observe it has to install one.
+   */
+  function withScrollIntoView(): { calls: Array<unknown>; restore: () => void } {
+    const calls: Array<unknown> = [];
+    const proto = HTMLElement.prototype as unknown as Record<string, unknown>;
+    const had = 'scrollIntoView' in proto;
+    proto.scrollIntoView = (options?: unknown) => void calls.push(options);
+    return {
+      calls,
+      restore: () => {
+        if (!had) delete proto.scrollIntoView;
+      },
+    };
+  }
+
+  it('scrolls a flashed card into view (spec §7.4)', () => {
+    const scroll = withScrollIntoView();
+    try {
+      render(<PrCard entry={okEntry()} onRemove={() => {}} flashed />);
+      expect(scroll.calls).toHaveLength(1);
+    } finally {
+      scroll.restore();
+    }
+  });
+
+  it('does not scroll a card that is not flashed', () => {
+    const scroll = withScrollIntoView();
+    try {
+      render(<PrCard entry={okEntry()} onRemove={() => {}} />);
+      expect(scroll.calls).toHaveLength(0);
+    } finally {
+      scroll.restore();
+    }
+  });
+
+  it('renders a flashed card where scrollIntoView does not exist', () => {
+    // The default jsdom environment: no scrollIntoView at all. An unguarded
+    // call would take out the card, and with it the board.
+    expect(() =>
+      render(<PrCard entry={okEntry()} onRemove={() => {}} flashed />),
+    ).not.toThrow();
+  });
+});
+
 describe('PrCard — an unresolved PR', () => {
   it('shows the identity it knows and the reason it failed', () => {
     render(<PrCard entry={errorEntry} onRemove={() => {}} />);

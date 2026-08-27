@@ -1,3 +1,4 @@
+import { useEffect, useRef } from 'react';
 import styled from 'styled-components';
 import { badgesFor } from '../domain/badges';
 import type { PrEntry, PrKey } from '../types';
@@ -114,6 +115,21 @@ const RemoveButton = styled.button`
 `;
 
 export function PrCard({ entry, onRemove, flashed = false }: PrCardProps) {
+  const cardRef = useRef<HTMLElement | null>(null);
+
+  // Spec §7.4: adding a PR that is already tracked scrolls the existing card
+  // into view AND flashes it. Flashing alone is no answer when the card is
+  // three columns down and off the bottom of the window — the user is told
+  // nothing happened and shown nothing.
+  useEffect(() => {
+    if (!flashed) return;
+    const card = cardRef.current;
+    // Guarded rather than assumed: scrollIntoView is layout-dependent and not
+    // present in every environment the component renders in (jsdom has none).
+    if (typeof card?.scrollIntoView !== 'function') return;
+    card.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  }, [flashed]);
+
   const isDraft = entry.status === 'ok' && entry.pr.isDraft;
   const nameWithOwner =
     entry.status === 'ok'
@@ -123,6 +139,7 @@ export function PrCard({ entry, onRemove, flashed = false }: PrCardProps) {
 
   return (
     <Card
+      ref={cardRef}
       data-testid="pr-card"
       data-status={entry.status}
       data-draft={isDraft ? 'true' : 'false'}

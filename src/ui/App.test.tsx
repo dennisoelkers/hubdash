@@ -213,7 +213,15 @@ describe('App — the board', () => {
     expect(JSON.parse(storage.getItem(TRACKED_PRS_KEY) ?? '').prs).toEqual([]);
   });
 
-  it('does not add a duplicate, and flashes the card that is already there', async () => {
+  it('does not add a duplicate, and scrolls the card that is already there into view', async () => {
+    // jsdom has no scrollIntoView, so observing spec §7.4's scroll means
+    // installing one for the duration of this test.
+    const proto = HTMLElement.prototype as unknown as Record<string, unknown>;
+    const scrolled: string[] = [];
+    proto.scrollIntoView = function scrollIntoView(this: HTMLElement) {
+      scrolled.push(this.textContent ?? '');
+    };
+
     const fetchImpl = boardResponder({ pr0: prNode(4821) });
     const storage = fakeStorage({ [TOKEN_KEY]: storedToken, [TRACKED_PRS_KEY]: storedPrs(4821) });
     render(<App deps={{ fetchImpl, storage, clock, nowMs }} />);
@@ -230,6 +238,9 @@ describe('App — the board', () => {
     await waitFor(() =>
       expect(screen.getByTestId('pr-card')).toHaveAttribute('data-flashed', 'true'),
     );
+    expect(scrolled).toHaveLength(1);
+    expect(scrolled[0]).toContain('#4821');
+    delete proto.scrollIntoView;
   });
 });
 
