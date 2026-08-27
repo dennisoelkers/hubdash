@@ -1,0 +1,128 @@
+import { act, render, screen } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
+import { describe, expect, it, vi } from 'vitest';
+import { makePr } from '../test/makePr';
+import type { BackportSlot, PrEntry, PrKey } from '../types';
+import { SlotRow } from './SlotRow';
+
+function tracked(number: number) {
+  return { owner: 'Graylog2', repo: 'graylog2-server', number, addedAt: '2026-08-01T00:00:00Z' };
+}
+
+function entryMap(...specs: Array<[number, 'OPEN' | 'CLOSED' | 'MERGED']>): Map<PrKey, PrEntry> {
+  const map = new Map<PrKey, PrEntry>();
+  for (const [number, lifecycle] of specs) {
+    const pr = makePr({ number, lifecycle });
+    map.set(pr.key, { status: 'ok', key: pr.key, tracked: tracked(number), pr });
+  }
+  return map;
+}
+
+function dataTransfer(text: string): DataTransfer {
+  return { types: ['text/plain'], getData: () => text } as unknown as DataTransfer;
+}
+
+const EMPTY: BackportSlot = { version: '6.0', pr: null };
+const FILLED: BackportSlot = { version: '6.2', pr: tracked(4840) };
+
+describe('SlotRow — display', () => {
+  it('shows the version label and an invitation when empty', () => {
+    render(<SlotRow slot={EMPTY} entries={new Map()} onFill={() => ({ ok: true })} onRemoveVersion={() => {}} />);
+    expect(screen.getByText('6.0')).toBeInTheDocument();
+    expect(screen.getByText(/drop a pull request/i)).toBeInTheDocument();
+  });
+
+  it('shows pending when a PR is set but has no entry yet', () => {
+    render(<SlotRow slot={FILLED} entries={new Map()} onFill={() => ({ ok: true })} onRemoveVersion={() => {}} />);
+    expect(screen.getByText('#4840')).toBeInTheDocument();
+    expect(screen.getByText(/pending/i)).toBeInTheDocument();
+  });
+
+  it('shows merged, open and closed from the entry', () => {
+    const { rerender } = render(
+      <SlotRow slot={FILLED} entries={entryMap([4840, 'MERGED'])} onFill={() => ({ ok: true })} onRemoveVersion={() => {}} />,
+    );
+    expect(screen.getByText(/merged/i)).toBeInTheDocument();
+
+    rerender(
+      <SlotRow slot={FILLED} entries={entryMap([4840, 'CLOSED'])} onFill={() => ({ ok: true })} onRemoveVersion={() => {}} />,
+    );
+    expect(screen.getByText(/closed, not merged/i)).toBeInTheDocument();
+  });
+
+  it('shows the GitHub message for an errored PR', () => {
+    const map = new Map<PrKey, PrEntry>([
+      ['graylog2/graylog2-server#4840', { status: 'error', key: 'graylog2/graylog2-server#4840', tracked: tracked(4840), message: 'Not found' }],
+    ]);
+    render(<SlotRow slot={FILLED} entries={map} onFill={() => ({ ok: true })} onRemoveVersion={() => {}} />);
+    expect(screen.getByText(/not found/i)).toBeInTheDocument();
+  });
+
+  it('links the PR number to GitHub', () => {
+    render(<SlotRow slot={FILLED} entries={entryMap([4840, 'OPEN'])} onFill={() => ({ ok: true })} onRemoveVersion={() => {}} />);
+    expect(screen.getByRole('link', { name: '#4840' })).toHaveAttribute(
+      'href',
+      'https://github.com/Graylog2/graylog2-server/pull/4840',
+    );
+  });
+});
+
+describe('SlotRow — filling by drop', () => {
+  it('parses a dropped URL and calls onFill with it', () => {
+    const onFill = vi.fn().mockReturnValue({ ok: true });
+    render(<SlotRow slot={EMPTY} entries={new Map()} onFill={onFill} onRemoveVersion={() => {}} />);
+    const row = screen.getByTestId('slot-row');
+    const event = new Event('drop', { bubbles: true, cancelable: true });
+    Object.assign(event, { dataTransfer: dataTransfer('https://github.com/Graylog2/graylog2-server/pull/4839') });
+    act(() => void row.dispatchEvent(event));
+    expect(onFill).toHaveBeenCalledWith({ owner: 'Graylog2', repo: 'graylog2-server', number: 4839 });
+  });
+
+  it('shows a parse error inline without calling onFill', () => {
+    const onFill = vi.fn();
+    render(<SlotRow slot={EMPTY} entries={new Map()} onFill={onFill} onRemoveVersion={() => {}} />);
+    const row = screen.getByTestId('slot-row');
+    const event = new Event('drop', { bubbles: true, cancelable: true });
+    Object.assign(event, { dataTransfer: dataTransfer('https://gitlab.com/a/b/pull/1') });
+    act(() => void row.dispatchEvent(event));
+    expect(onFill).not.toHaveBeenCalled();
+    expect(screen.getByRole('alert')).toHaveTextContent(/github\.com/i);
+  });
+
+  it('shows onFill’s rejection message when it refuses the PR', () => {
+    const onFill = vi.fn().mockReturnValue({ ok: false, error: 'That pull request is already filling the 6.1 slot.' });
+    render(<SlotRow slot={EMPTY} entries={new Map()} onFill={onFill} onRemoveVersion={() => {}} />);
+    const row = screen.getByTestId('slot-row');
+    const event = new Event('drop', { bubbles: true, cancelable: true });
+    Object.assign(event, { dataTransfer: dataTransfer('https://github.com/Graylog2/graylog2-server/pull/4840') });
+    act(() => void row.dispatchEvent(event));
+    expect(screen.getByRole('alert')).toHaveTextContent(/6\.1 slot/);
+  });
+
+  it('prevents the default on dragover so the browser allows the drop', () => {
+    render(<SlotRow slot={EMPTY} entries={new Map()} onFill={() => ({ ok: true })} onRemoveVersion={() => {}} />);
+    const event = new Event('dragover', { bubbles: true, cancelable: true });
+    screen.getByTestId('slot-row').dispatchEvent(event);
+    expect(event.defaultPrevented).toBe(true);
+  });
+});
+
+describe('SlotRow — filling by click-to-paste', () => {
+  it('reveals a URL input on click and fills on submit', async () => {
+    const onFill = vi.fn().mockReturnValue({ ok: true });
+    render(<SlotRow slot={EMPTY} entries={new Map()} onFill={onFill} onRemoveVersion={() => {}} />);
+    await userEvent.click(screen.getByRole('button', { name: /add a link/i }));
+    const input = screen.getByLabelText(/pull request url/i);
+    await userEvent.type(input, 'https://github.com/Graylog2/graylog2-server/pull/4839{Enter}');
+    expect(onFill).toHaveBeenCalledWith({ owner: 'Graylog2', repo: 'graylog2-server', number: 4839 });
+  });
+});
+
+describe('SlotRow — removing a version', () => {
+  it('calls onRemoveVersion, without confirmation', async () => {
+    const onRemoveVersion = vi.fn();
+    render(<SlotRow slot={EMPTY} entries={new Map()} onFill={() => ({ ok: true })} onRemoveVersion={onRemoveVersion} />);
+    await userEvent.click(screen.getByRole('button', { name: /remove 6\.0/i }));
+    expect(onRemoveVersion).toHaveBeenCalled();
+  });
+});
