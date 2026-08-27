@@ -293,3 +293,29 @@ describe('useBackportGroups — storage errors', () => {
     expect(storage.getItem(BACKPORT_GROUPS_KEY)).toBe('not json{');
   });
 });
+
+describe('useBackportGroups — archiving', () => {
+  it('archives a group by key and persists it', () => {
+    const storage = fakeStorage();
+    const { result } = renderHook(() => useBackportGroups({ storage, clock }));
+    act(() => {
+      result.current.addGroup(MAIN, ['6.2']);
+    });
+    act(() => {
+      result.current.archiveGroup(KEY);
+    });
+    expect(result.current.groups[0]?.archived).toBe(true);
+    expect(JSON.parse(storage.getItem(BACKPORT_GROUPS_KEY) ?? '').groups[0].archived).toBe(true);
+  });
+
+  it('ignores archiving an unknown key', () => {
+    const { result } = setup();
+    act(() => {
+      result.current.addGroup(MAIN, []);
+    });
+    act(() => {
+      result.current.archiveGroup('nope/nope#1');
+    });
+    expect(result.current.groups[0]?.archived).toBe(false);
+  });
+});

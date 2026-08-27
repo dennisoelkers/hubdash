@@ -27,6 +27,7 @@ export type UseBackportGroupsResult = {
   addVersion: (key: PrKey, version: string) => void;
   removeVersion: (key: PrKey, version: string) => void;
   fillSlot: (key: PrKey, version: string, pr: ParsedPr) => FillSlotOutcome;
+  archiveGroup: (key: PrKey) => void;
   storageError: string | null;
   dismissStorageError: () => void;
 };
@@ -174,6 +175,13 @@ export function useBackportGroups(
     [mapGroup, now],
   );
 
+  const archiveGroup = useCallback(
+    (key: PrKey) => {
+      mapGroup(key, (group) => (group.archived ? null : { ...group, archived: true }));
+    },
+    [mapGroup],
+  );
+
   const dismissStorageError = useCallback(() => setStorageError(null), []);
 
   return {
@@ -183,6 +191,7 @@ export function useBackportGroups(
     addVersion,
     removeVersion,
     fillSlot,
+    archiveGroup,
     storageError,
     dismissStorageError,
   };
