@@ -9,6 +9,14 @@ export type UseTrackedPrsOptions = {
   clock?: () => string;
 };
 
+/**
+ * Module-level so its identity is stable. Inlining this as
+ * `clock ?? (() => new Date().toISOString())` would mint a new function on
+ * every render, which defeats the memoization of `add` — and App re-renders
+ * once a second to drive the freshness label, so that churn is continuous.
+ */
+const defaultClock = () => new Date().toISOString();
+
 export type UseTrackedPrsResult = {
   prs: TrackedPr[];
   add: (parsed: ParsedPr) => { added: boolean; key: PrKey };
@@ -28,7 +36,7 @@ function keyOf(pr: TrackedPr | ParsedPr): PrKey {
  */
 export function useTrackedPrs(options: UseTrackedPrsOptions = {}): UseTrackedPrsResult {
   const { storage, clock } = options;
-  const now = clock ?? (() => new Date().toISOString());
+  const now = clock ?? defaultClock;
 
   const initial = useRef<{ prs: TrackedPr[]; error: string | null } | null>(null);
   if (initial.current === null) {
