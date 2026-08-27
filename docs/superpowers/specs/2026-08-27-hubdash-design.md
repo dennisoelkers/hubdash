@@ -65,6 +65,10 @@ out the other:
 | `hubdash.token` | `{ "version": 1, "token": string }` |
 | `hubdash.prs`   | `{ "version": 1, "prs": TrackedPr[] }` |
 
+A third key, `hubdash.backports`, was added later by
+`2026-08-27-backports-tab-design.md`. The identity-only principle below is
+unchanged and still binds it.
+
 ```ts
 type TrackedPr = {
   owner: string;    // "Graylog2"
