@@ -61,7 +61,10 @@ describe('classify — drafts (rule 5)', () => {
     expect(classify(makePr({ isDraft: true }))).toBe('needsAction');
   });
 
-  it('sends a draft with failing CI to needs action', () => {
+  it('sends a draft with failing CI to needs action via the CI rule, not the draft rule', () => {
+    // Rule 2 fires first here, so this does NOT isolate rule 5 — it pins the
+    // precedence between them. Rule 5 is isolated by the plain draft test
+    // above, and discriminated against rule 6 by the approved-draft test below.
     expect(classify(makePr({ isDraft: true, ci: 'failure' }))).toBe('needsAction');
   });
 
