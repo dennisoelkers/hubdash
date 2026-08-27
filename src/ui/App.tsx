@@ -115,8 +115,16 @@ export function App({ deps = {} }: { deps?: AppDeps } = {}) {
   const pollTargets = useMemo(() => {
     const byKey = new Map<PrKey, TrackedPr>();
     for (const pr of prs) byKey.set(prKey(pr.owner, pr.repo, pr.number), pr);
+    // First writer wins, deliberately: when the same PR is on the board *and* in
+    // a group, the board's entry is the one that survives, because the board
+    // owns the tracked list — its `addedAt`, and the owner/repo casing an
+    // errored entry renders, come from there rather than from whichever loop
+    // happened to run last.
     for (const group of groups) {
-      for (const pr of groupPrs(group)) byKey.set(prKey(pr.owner, pr.repo, pr.number), pr);
+      for (const pr of groupPrs(group)) {
+        const key = prKey(pr.owner, pr.repo, pr.number);
+        if (!byKey.has(key)) byKey.set(key, pr);
+      }
     }
     return [...byKey.values()];
   }, [prs, groups]);

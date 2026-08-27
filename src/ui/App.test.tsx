@@ -73,6 +73,34 @@ function boardResponder(nodes: Record<string, unknown>) {
   });
 }
 
+/**
+ * The GraphQL query text one of `fetchImpl`'s calls actually sent. The body is
+ * JSON-encoded, exactly the shape `boardResponder` above parses; asserting
+ * against this asserts what GitHub was *asked*, not what happened to render.
+ */
+function queryOf(fetchImpl: { mock: { calls: unknown[] } }, callIndex = -1): string {
+  const call: unknown = fetchImpl.mock.calls.at(callIndex);
+  if (!Array.isArray(call)) throw new Error('fetchImpl was never called');
+  const init: unknown = call[1];
+  if (init === null || typeof init !== 'object' || !('body' in init)) {
+    throw new Error('the request carried no body');
+  }
+  const body: unknown = JSON.parse(String(init.body));
+  if (body === null || typeof body !== 'object' || !('query' in body)) {
+    throw new Error('the request body carried no query');
+  }
+  return String(body.query);
+}
+
+/** Every `prN: repository(...)` alias in a query, as `alias owner/repo#number`. */
+function aliasesIn(query: string): string[] {
+  const pattern =
+    /(pr\d+): repository\(owner: "([^"]+)", name: "([^"]+)"\)\s*\{\s*pullRequest\(number: (\d+)\)/g;
+  return [...query.matchAll(pattern)].map(
+    (match) => `${match[1] ?? ''} ${match[2] ?? ''}/${match[3] ?? ''}#${match[4] ?? ''}`,
+  );
+}
+
 const nowMs = () => Date.parse('2026-08-27T12:00:00Z');
 const clock = () => '2026-08-27T12:00:00Z';
 
@@ -519,9 +547,50 @@ describe('App — the Backports tab', () => {
     );
     await userEvent.click(screen.getByRole('button', { name: /^track$/i }));
 
-    // One poll covers the board's #4821 and the group's main #4900.
+    // Spec §9: one request covers the union. Asserted against the query that
+    // was actually sent, because the card's `#4900` renders from the group's own
+    // state whether or not the PR ever reached GitHub, and the call count rises
+    // on any change to `groups` regardless of what the query contained.
+    await waitFor(() => expect(fetchImpl).toHaveBeenCalledTimes(2));
+    expect(aliasesIn(queryOf(fetchImpl))).toEqual([
+      'pr0 Graylog2/graylog2-server#4821',
+      'pr1 Graylog2/graylog2-server#4900',
+    ]);
     expect(await screen.findByText('#4900')).toBeInTheDocument();
-    expect(fetchImpl).toHaveBeenCalledTimes(2); // mount poll, then the immediate poll on adding the group
+  });
+
+  it('sends one alias, and renders one card, for a PR tracked on both tabs', async () => {
+    const fetchImpl = boardResponder({ pr0: prNode(4821), pr1: prNode(4790) });
+    const storage = fakeStorage({
+      [TOKEN_KEY]: storedToken,
+      [TRACKED_PRS_KEY]: storedPrs(4821, 4790),
+    });
+    render(<App deps={{ fetchImpl, storage, clock, nowMs }} />);
+    await screen.findByText('#4821');
+
+    await userEvent.click(screen.getByRole('tab', { name: /backports/i }));
+    await userEvent.click(screen.getByRole('button', { name: /track backports/i }));
+    // Deliberately different casing from the board's entry: `prKey` lowercases
+    // owner and repo, so these are the same PR and must collapse to one alias.
+    await userEvent.type(
+      screen.getByLabelText(/main pull request/i),
+      'https://github.com/graylog2/GRAYLOG2-SERVER/pull/4821',
+    );
+    await userEvent.click(screen.getByRole('button', { name: /^track$/i }));
+
+    // Two aliases, not three: #4821 is asked about exactly once, and with the
+    // board's own casing, because the board owns the tracked list.
+    await waitFor(() => expect(fetchImpl).toHaveBeenCalledTimes(2));
+    expect(aliasesIn(queryOf(fetchImpl))).toEqual([
+      'pr0 Graylog2/graylog2-server#4821',
+      'pr1 Graylog2/graylog2-server#4790',
+    ]);
+
+    // And the board still shows it once — a duplicated poll target would render
+    // the same PR as two cards with duplicate React keys.
+    await userEvent.click(screen.getByRole('tab', { name: /board/i }));
+    expect(screen.getAllByText('#4821')).toHaveLength(1);
+    expect(screen.getAllByText('Change number 4821')).toHaveLength(1);
   });
 
   it('fills a slot by dropping a link on it and the card updates on the next poll', async () => {
