@@ -15,6 +15,7 @@ export type BackportGroupCardProps = {
   onAddVersion: (version: string) => void;
   onRemoveVersion: (version: string) => void;
   onFillSlot: (version: string, pr: ParsedPr) => { ok: true } | { ok: false; error: string };
+  onArchiveGroup: () => void;
   /**
    * The group to signal, if any. Spec §10.5: re-adding an already-tracked main
    * PR flashes the existing card rather than creating a second one.
@@ -84,6 +85,22 @@ const RemoveGroup = styled.button`
   }
 `;
 
+const ArchiveButton = styled.button`
+  padding: ${tokens.space(1)} ${tokens.space(2)};
+  background: none;
+  border: 1px solid ${tokens.color.border};
+  border-radius: ${tokens.radius};
+  color: ${tokens.color.textMuted};
+  font-family: ${tokens.font.body};
+  font-size: 12px;
+  cursor: pointer;
+
+  &:hover {
+    color: ${tokens.color.text};
+    border-color: ${tokens.color.accent};
+  }
+`;
+
 const Meta = styled.div`
   font-size: 12px;
   color: ${tokens.color.textMuted};
@@ -131,6 +148,7 @@ export function BackportGroupCard({
   onAddVersion,
   onRemoveVersion,
   onFillSlot,
+  onArchiveGroup,
   flashedKey = null,
 }: BackportGroupCardProps) {
   const [versionInput, setVersionInput] = useState('');
@@ -166,6 +184,11 @@ export function BackportGroupCard({
         </NumberLink>
         <Title>{mainTitle}</Title>
         <RollUp>{`${landed} of ${total} landed`}</RollUp>
+        {isComplete(group, entries) ? (
+          <ArchiveButton type="button" onClick={onArchiveGroup}>
+            Archive
+          </ArchiveButton>
+        ) : null}
         <RemoveGroup type="button" aria-label="Remove group" onClick={onRemoveGroup}>
           ✕
         </RemoveGroup>

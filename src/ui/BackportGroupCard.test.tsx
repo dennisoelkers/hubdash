@@ -39,6 +39,7 @@ function setup(overrides: Partial<Parameters<typeof BackportGroupCard>[0]> = {})
     onAddVersion: vi.fn(),
     onRemoveVersion: vi.fn(),
     onFillSlot: vi.fn().mockReturnValue({ ok: true }),
+    onArchiveGroup: vi.fn(),
     ...overrides,
   };
   render(<BackportGroupCard {...props} />);
@@ -193,5 +194,31 @@ describe('BackportGroupCard — actions', () => {
     const props = setup();
     await userEvent.click(screen.getByRole('button', { name: /remove 6\.1/i }));
     expect(props.onRemoveVersion).toHaveBeenCalledWith('6.1');
+  });
+});
+
+describe('BackportGroupCard — archiving', () => {
+  it('shows the Archive button when the group is complete', () => {
+    setup({
+      group: group({ slots: [{ version: '6.2', pr: tracked(4840) }] }),
+      entries: entryMap([4821, 'MERGED'], [4840, 'MERGED']),
+    });
+    expect(screen.getByRole('button', { name: /^archive$/i })).toBeInTheDocument();
+  });
+
+  it('does not show the Archive button on an incomplete group', () => {
+    setup();
+    expect(screen.queryByRole('button', { name: /^archive$/i })).not.toBeInTheDocument();
+  });
+
+  it('calls onArchiveGroup when Archive is clicked', async () => {
+    const onArchiveGroup = vi.fn();
+    setup({
+      group: group({ slots: [{ version: '6.2', pr: tracked(4840) }] }),
+      entries: entryMap([4821, 'MERGED'], [4840, 'MERGED']),
+      onArchiveGroup,
+    });
+    await userEvent.click(screen.getByRole('button', { name: /^archive$/i }));
+    expect(onArchiveGroup).toHaveBeenCalled();
   });
 });
