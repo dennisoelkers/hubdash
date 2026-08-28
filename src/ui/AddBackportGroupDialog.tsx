@@ -83,7 +83,12 @@ const Button = styled.button`
   }
 `;
 
-export function AddBackportGroupDialog({ open, onClose, onAdd, initialUrl }: AddBackportGroupDialogProps) {
+export function AddBackportGroupDialog({
+  open,
+  onClose,
+  onAdd,
+  initialUrl,
+}: AddBackportGroupDialogProps) {
   const [url, setUrl] = useState('');
   const [versions, setVersions] = useState('');
   const [error, setError] = useState<string | null>(null);

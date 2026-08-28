@@ -13,7 +13,9 @@ function setup(onAdd = vi.fn().mockReturnValue({ added: true, key: 'k' })) {
 
 describe('AddPrDialog', () => {
   it('renders nothing when closed', () => {
-    render(<AddPrDialog open={false} onClose={() => {}} onAdd={() => ({ added: true, key: 'k' })} />);
+    render(
+      <AddPrDialog open={false} onClose={() => {}} onAdd={() => ({ added: true, key: 'k' })} />,
+    );
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
   });
 
@@ -34,7 +36,10 @@ describe('AddPrDialog', () => {
 
   it('shows the parser error and does not add, for an invalid URL', async () => {
     const { onAdd, onClose } = setup();
-    await userEvent.type(screen.getByLabelText(/pull request url/i), 'https://gitlab.com/a/b/pull/1');
+    await userEvent.type(
+      screen.getByLabelText(/pull request url/i),
+      'https://gitlab.com/a/b/pull/1',
+    );
     await userEvent.click(screen.getByRole('button', { name: /^add$/i }));
 
     expect(screen.getByRole('alert')).toHaveTextContent(/github\.com/i);

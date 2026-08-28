@@ -13,7 +13,11 @@ export type BackportGroupArchiveSectionProps = {
   onRemoveGroup: (key: PrKey) => void;
   onAddVersion: (key: PrKey, version: string) => void;
   onRemoveVersion: (key: PrKey, version: string) => void;
-  onFillSlot: (key: PrKey, version: string, pr: ParsedPr) => { ok: true } | { ok: false; error: string };
+  onFillSlot: (
+    key: PrKey,
+    version: string,
+    pr: ParsedPr,
+  ) => { ok: true } | { ok: false; error: string };
   onArchiveGroup: (key: PrKey) => void;
 };
 

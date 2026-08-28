@@ -13,9 +13,7 @@ import type {
 import { aliasFor } from './buildQuery';
 import { asRecord } from './json';
 
-export type ParseResponseResult =
-  | { ok: true; result: PollResult }
-  | { ok: false; error: string };
+export type ParseResponseResult = { ok: true; result: PollResult } | { ok: false; error: string };
 
 const FAILING_CONCLUSIONS = new Set([
   'FAILURE',

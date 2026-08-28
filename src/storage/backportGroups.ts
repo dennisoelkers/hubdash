@@ -86,9 +86,6 @@ export function loadBackportGroups(storage?: Storage | null): LoadBackportGroups
   return { groups: envelope.groups, error: null };
 }
 
-export function saveBackportGroups(
-  groups: BackportGroup[],
-  storage?: Storage | null,
-): void {
+export function saveBackportGroups(groups: BackportGroup[], storage?: Storage | null): void {
   writeKey(storage, BACKPORT_GROUPS_KEY, JSON.stringify({ version: CURRENT_VERSION, groups }));
 }

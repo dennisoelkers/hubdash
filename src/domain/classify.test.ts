@@ -12,9 +12,9 @@ describe('classify — lifecycle (rule 1)', () => {
   });
 
   it('archives regardless of any other signal', () => {
-    expect(
-      classify(makePr({ lifecycle: 'MERGED', ci: 'failure', mergeable: 'CONFLICTING' })),
-    ).toBe('archive');
+    expect(classify(makePr({ lifecycle: 'MERGED', ci: 'failure', mergeable: 'CONFLICTING' }))).toBe(
+      'archive',
+    );
   });
 });
 
@@ -88,9 +88,9 @@ describe('classify — ready (rule 6)', () => {
   });
 
   it('is NOT ready when approved but conflicting', () => {
-    expect(
-      classify(makePr({ reviewDecision: 'APPROVED', mergeable: 'CONFLICTING' })),
-    ).toBe('needsAction');
+    expect(classify(makePr({ reviewDecision: 'APPROVED', mergeable: 'CONFLICTING' }))).toBe(
+      'needsAction',
+    );
   });
 
   it('is NOT ready when approved but CI is still running', () => {

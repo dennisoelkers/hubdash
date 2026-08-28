@@ -92,7 +92,9 @@ describe('useDragAndPaste — extracting the text', () => {
     const onText = vi.fn();
     render(<Probe onText={onText} />);
     const event = new Event('paste', { bubbles: true, cancelable: true });
-    Object.assign(event, { clipboardData: dataTransfer({ 'text/plain': 'https://github.com/a/b/pull/4' }) });
+    Object.assign(event, {
+      clipboardData: dataTransfer({ 'text/plain': 'https://github.com/a/b/pull/4' }),
+    });
     act(() => void document.dispatchEvent(event));
     expect(onText).toHaveBeenCalledWith('https://github.com/a/b/pull/4');
   });
@@ -109,7 +111,9 @@ describe('useDragAndPaste — extracting the text', () => {
     field.focus();
 
     const event = new Event('paste', { bubbles: true, cancelable: true });
-    Object.assign(event, { clipboardData: dataTransfer({ 'text/plain': 'https://github.com/a/b/pull/5' }) });
+    Object.assign(event, {
+      clipboardData: dataTransfer({ 'text/plain': 'https://github.com/a/b/pull/5' }),
+    });
     // Dispatch on the field, not the document: a real browser targets the
     // focused element, and the event bubbles to our document-level listener.
     act(() => void field.dispatchEvent(event));

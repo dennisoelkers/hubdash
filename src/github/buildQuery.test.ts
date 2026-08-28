@@ -4,7 +4,12 @@ import { aliasFor, buildQuery } from './buildQuery';
 
 const prs: TrackedPr[] = [
   { owner: 'Example', repo: 'example-server', number: 4821, addedAt: '2026-08-27T09:00:00Z' },
-  { owner: 'Example', repo: 'example-plugin-enterprise', number: 912, addedAt: '2026-08-27T09:00:00Z' },
+  {
+    owner: 'Example',
+    repo: 'example-plugin-enterprise',
+    number: 912,
+    addedAt: '2026-08-27T09:00:00Z',
+  },
 ];
 
 describe('aliasFor', () => {

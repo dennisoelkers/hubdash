@@ -38,7 +38,9 @@ describe('badgesFor', () => {
   it('shows an approval count only when the PR is not yet fully approved', () => {
     // "✓✓ approved" plus "2 approvals" would be saying the same thing twice.
     expect(kinds({ reviewDecision: 'APPROVED', approvalCount: 2 })).not.toContain('approvalCount');
-    expect(kinds({ reviewDecision: 'REVIEW_REQUIRED', approvalCount: 1 })).toContain('approvalCount');
+    expect(kinds({ reviewDecision: 'REVIEW_REQUIRED', approvalCount: 1 })).toContain(
+      'approvalCount',
+    );
   });
 
   it('pluralises the approval count', () => {
@@ -51,8 +53,12 @@ describe('badgesFor', () => {
   });
 
   it('pluralises requested reviewers and omits zero', () => {
-    expect(labelOf('reviewersRequested', { requestedReviewerCount: 1 })).toBe('1 reviewer requested');
-    expect(labelOf('reviewersRequested', { requestedReviewerCount: 3 })).toBe('3 reviewers requested');
+    expect(labelOf('reviewersRequested', { requestedReviewerCount: 1 })).toBe(
+      '1 reviewer requested',
+    );
+    expect(labelOf('reviewersRequested', { requestedReviewerCount: 3 })).toBe(
+      '3 reviewers requested',
+    );
     expect(kinds({ requestedReviewerCount: 0 })).not.toContain('reviewersRequested');
   });
 
@@ -62,7 +68,9 @@ describe('badgesFor', () => {
 
   it('falls back to an uncounted failure when the rollup is red but no context was seen', () => {
     // Happens when a PR has more than the 100 contexts we request (spec §5.2).
-    expect(labelOf('failingChecks', { ci: 'failure', failingCheckCount: 0 })).toBe('● build failing');
+    expect(labelOf('failingChecks', { ci: 'failure', failingCheckCount: 0 })).toBe(
+      '● build failing',
+    );
   });
 
   it('marks CI running and CI green', () => {

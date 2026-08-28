@@ -30,10 +30,6 @@ describe('parseVersions', () => {
   });
 
   it('accepts labels that are not dotted numbers', () => {
-    expect(parseVersions('main, release/6.2, hotfix')).toEqual([
-      'main',
-      'release/6.2',
-      'hotfix',
-    ]);
+    expect(parseVersions('main, release/6.2, hotfix')).toEqual(['main', 'release/6.2', 'hotfix']);
   });
 });

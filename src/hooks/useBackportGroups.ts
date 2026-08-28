@@ -52,9 +52,7 @@ function usedIn(group: BackportGroup, pr: ParsedPr, exceptVersion: string): stri
  * hook never saves on mount, so an unreadable stored value is not overwritten
  * before the user has seen the warning about it.
  */
-export function useBackportGroups(
-  options: UseBackportGroupsOptions = {},
-): UseBackportGroupsResult {
+export function useBackportGroups(options: UseBackportGroupsOptions = {}): UseBackportGroupsResult {
   const { storage, clock } = options;
   const now = clock ?? defaultClock;
 

@@ -30,7 +30,9 @@ describe('parsePrUrl accepted forms', () => {
 
   it('parses a URL with a trailing path segment', () => {
     expect(expectOk('https://github.com/Example/example-server/pull/4821/files')).toEqual(expected);
-    expect(expectOk('https://github.com/Example/example-server/pull/4821/commits')).toEqual(expected);
+    expect(expectOk('https://github.com/Example/example-server/pull/4821/commits')).toEqual(
+      expected,
+    );
   });
 
   it('parses a URL with a fragment', () => {
@@ -42,15 +44,11 @@ describe('parsePrUrl accepted forms', () => {
   it('parses a URL with a purely numeric fragment from its path, not as shorthand', () => {
     // Regression: a looser shorthand regex matched this whole string and
     // returned owner "https:" with a garbage repo instead of parsing the path.
-    expect(
-      expectOk('https://github.com/Example/example-server/pull/4821#12345'),
-    ).toEqual(expected);
+    expect(expectOk('https://github.com/Example/example-server/pull/4821#12345')).toEqual(expected);
   });
 
   it('parses a URL with a query string', () => {
-    expect(
-      expectOk('https://github.com/Example/example-server/pull/4821?w=1'),
-    ).toEqual(expected);
+    expect(expectOk('https://github.com/Example/example-server/pull/4821?w=1')).toEqual(expected);
   });
 
   it('parses http as well as https', () => {

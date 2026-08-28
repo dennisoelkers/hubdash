@@ -198,8 +198,13 @@ export function BackportGroupCard({
             textContent — as a bare sibling text node next to MainStatus, no
             single element's textContent would equal just the repo string. */}
         <span>{mainKey}</span>
-        {mainAuthor === null ? null : <> · <span>{mainAuthor}</span></>} ·{' '}
-        <MainStatus>{mainLabel(prStateFor(group.main, entries))}</MainStatus>
+        {mainAuthor === null ? null : (
+          <>
+            {' '}
+            · <span>{mainAuthor}</span>
+          </>
+        )}{' '}
+        · <MainStatus>{mainLabel(prStateFor(group.main, entries))}</MainStatus>
       </Meta>
       {group.slots.map((slot) => (
         <SlotRow
@@ -211,7 +216,10 @@ export function BackportGroupCard({
         />
       ))}
       <form onSubmit={submitVersions}>
-        <label htmlFor={`add-version-${group.main.number}`} style={{ position: 'absolute', left: '-9999px' }}>
+        <label
+          htmlFor={`add-version-${group.main.number}`}
+          style={{ position: 'absolute', left: '-9999px' }}
+        >
           Add version
         </label>
         <AddVersionInput

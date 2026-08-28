@@ -92,7 +92,10 @@ describe('slotStateFor', () => {
 
   it('is errored, carrying the message, when the PR did not resolve', () => {
     const map = new Map<PrKey, PrEntry>([
-      [keyOf(4840), { status: 'error', key: keyOf(4840), tracked: tracked(4840), message: 'Not found' }],
+      [
+        keyOf(4840),
+        { status: 'error', key: keyOf(4840), tracked: tracked(4840), message: 'Not found' },
+      ],
     ]);
     expect(slotStateFor(slot('6.2', 4840), map)).toEqual({ kind: 'errored', message: 'Not found' });
   });

@@ -13,7 +13,13 @@ function setup(onAdd = vi.fn().mockReturnValue({ added: true, key: 'k' })) {
 
 describe('AddBackportGroupDialog', () => {
   it('renders nothing when closed', () => {
-    render(<AddBackportGroupDialog open={false} onClose={() => {}} onAdd={() => ({ added: true, key: 'k' })} />);
+    render(
+      <AddBackportGroupDialog
+        open={false}
+        onClose={() => {}}
+        onAdd={() => ({ added: true, key: 'k' })}
+      />,
+    );
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
   });
 
@@ -23,10 +29,10 @@ describe('AddBackportGroupDialog', () => {
     await userEvent.type(screen.getByLabelText(/backport to/i), '6.2, 6.1');
     await userEvent.click(screen.getByRole('button', { name: /track/i }));
 
-    expect(onAdd).toHaveBeenCalledWith(
-      { owner: 'Example', repo: 'example-server', number: 4821 },
-      ['6.2', '6.1'],
-    );
+    expect(onAdd).toHaveBeenCalledWith({ owner: 'Example', repo: 'example-server', number: 4821 }, [
+      '6.2',
+      '6.1',
+    ]);
     expect(onClose).toHaveBeenCalled();
   });
 
@@ -42,7 +48,10 @@ describe('AddBackportGroupDialog', () => {
 
   it('shows the parser error and does not add, for an invalid main PR URL', async () => {
     const { onAdd, onClose } = setup();
-    await userEvent.type(screen.getByLabelText(/main pull request/i), 'https://gitlab.com/a/b/pull/1');
+    await userEvent.type(
+      screen.getByLabelText(/main pull request/i),
+      'https://gitlab.com/a/b/pull/1',
+    );
     await userEvent.click(screen.getByRole('button', { name: /track/i }));
 
     expect(screen.getByRole('alert')).toHaveTextContent(/github\.com/i);
@@ -71,8 +80,16 @@ describe('AddBackportGroupDialog', () => {
       <AddBackportGroupDialog open onClose={() => {}} onAdd={() => ({ added: true, key: 'k' })} />,
     );
     await userEvent.type(screen.getByLabelText(/main pull request/i), URL);
-    rerender(<AddBackportGroupDialog open={false} onClose={() => {}} onAdd={() => ({ added: true, key: 'k' })} />);
-    rerender(<AddBackportGroupDialog open onClose={() => {}} onAdd={() => ({ added: true, key: 'k' })} />);
+    rerender(
+      <AddBackportGroupDialog
+        open={false}
+        onClose={() => {}}
+        onAdd={() => ({ added: true, key: 'k' })}
+      />,
+    );
+    rerender(
+      <AddBackportGroupDialog open onClose={() => {}} onAdd={() => ({ added: true, key: 'k' })} />,
+    );
     expect(screen.getByLabelText(/main pull request/i)).toHaveValue('');
   });
 });
@@ -103,7 +120,9 @@ describe('AddBackportGroupDialog — pre-filled from a drop', () => {
   });
 
   it('focuses the URL field instead when opened without initialUrl', () => {
-    render(<AddBackportGroupDialog open onClose={() => {}} onAdd={() => ({ added: true, key: 'k' })} />);
+    render(
+      <AddBackportGroupDialog open onClose={() => {}} onAdd={() => ({ added: true, key: 'k' })} />,
+    );
     expect(screen.getByLabelText(/main pull request/i)).toHaveFocus();
   });
 
@@ -118,9 +137,15 @@ describe('AddBackportGroupDialog — pre-filled from a drop', () => {
     );
     expect(screen.getByLabelText(/main pull request/i)).toHaveValue(URL);
     rerender(
-      <AddBackportGroupDialog open={false} onClose={() => {}} onAdd={() => ({ added: true, key: 'k' })} />,
+      <AddBackportGroupDialog
+        open={false}
+        onClose={() => {}}
+        onAdd={() => ({ added: true, key: 'k' })}
+      />,
     );
-    rerender(<AddBackportGroupDialog open onClose={() => {}} onAdd={() => ({ added: true, key: 'k' })} />);
+    rerender(
+      <AddBackportGroupDialog open onClose={() => {}} onAdd={() => ({ added: true, key: 'k' })} />,
+    );
     expect(screen.getByLabelText(/main pull request/i)).toHaveValue('');
   });
 });

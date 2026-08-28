@@ -37,8 +37,12 @@ describe('Board', () => {
       entry({ number: 3, ci: 'failure' }),
     ]);
     render(<Board columns={columns} onRemove={() => {}} />);
-    expect(within(screen.getByTestId('column-waiting')).getByTestId('column-count')).toHaveTextContent('2');
-    expect(within(screen.getByTestId('column-needsAction')).getByTestId('column-count')).toHaveTextContent('1');
+    expect(
+      within(screen.getByTestId('column-waiting')).getByTestId('column-count'),
+    ).toHaveTextContent('2');
+    expect(
+      within(screen.getByTestId('column-needsAction')).getByTestId('column-count'),
+    ).toHaveTextContent('1');
   });
 
   it('puts each card in the right column', () => {
@@ -55,7 +59,9 @@ describe('Board', () => {
 
   it('shows an empty-state message in an empty column', () => {
     render(<Board columns={emptyColumns()} onRemove={() => {}} />);
-    expect(within(screen.getByTestId('column-ready')).getByText(/nothing here/i)).toBeInTheDocument();
+    expect(
+      within(screen.getByTestId('column-ready')).getByText(/nothing here/i),
+    ).toBeInTheDocument();
   });
 
   it('draws a divider above the drafts in needs action', () => {
@@ -64,7 +70,9 @@ describe('Board', () => {
       entry({ number: 2, isDraft: true }),
     ]);
     render(<Board columns={columns} onRemove={() => {}} />);
-    expect(within(screen.getByTestId('column-needsAction')).getByTestId('draft-divider')).toBeInTheDocument();
+    expect(
+      within(screen.getByTestId('column-needsAction')).getByTestId('draft-divider'),
+    ).toBeInTheDocument();
   });
 
   it('draws no divider when needs action has no drafts', () => {
@@ -83,9 +91,9 @@ describe('Board', () => {
       entry({ number: 2, isDraft: true }),
     ]);
     render(<Board columns={columns} onRemove={() => {}} />);
-    expect(
-      within(screen.getByTestId('column-needsAction')).getAllByTestId('pr-card'),
-    ).toHaveLength(2);
+    expect(within(screen.getByTestId('column-needsAction')).getAllByTestId('pr-card')).toHaveLength(
+      2,
+    );
     expect(screen.queryByTestId('draft-divider')).not.toBeInTheDocument();
   });
 
@@ -99,12 +107,10 @@ describe('Board', () => {
 
   it('flashes only the card whose key matches', () => {
     const columns = groupIntoColumns([entry({ number: 1 }), entry({ number: 2 })]);
-    render(
-      <Board columns={columns} onRemove={() => {}} flashedKey="example/example-server#2" />,
-    );
-    const flashed = screen.getAllByTestId('pr-card').filter(
-      (card) => card.getAttribute('data-flashed') === 'true',
-    );
+    render(<Board columns={columns} onRemove={() => {}} flashedKey="example/example-server#2" />);
+    const flashed = screen
+      .getAllByTestId('pr-card')
+      .filter((card) => card.getAttribute('data-flashed') === 'true');
     expect(flashed).toHaveLength(1);
     const [flashedCard] = flashed;
     if (!flashedCard) throw new Error('expected exactly one flashed card');
@@ -116,7 +122,10 @@ describe('ArchiveSection via Board', () => {
   it('starts collapsed, showing a count but no cards', () => {
     const columns = groupIntoColumns([entry({ number: 9, lifecycle: 'MERGED' })]);
     render(<Board columns={columns} onRemove={() => {}} />);
-    expect(screen.getByRole('button', { name: /archive/i })).toHaveAttribute('aria-expanded', 'false');
+    expect(screen.getByRole('button', { name: /archive/i })).toHaveAttribute(
+      'aria-expanded',
+      'false',
+    );
     expect(screen.queryByText('#9')).not.toBeInTheDocument();
     expect(screen.getByRole('button', { name: /archive/i })).toHaveTextContent('1');
   });

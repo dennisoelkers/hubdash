@@ -36,7 +36,13 @@ describe('token storage', () => {
   });
 
   it('reports an error and returns null for an unusable value', () => {
-    for (const raw of ['not json{', '{}', '{"version":1}', '{"version":9,"token":"x"}', '{"version":1,"token":42}']) {
+    for (const raw of [
+      'not json{',
+      '{}',
+      '{"version":1}',
+      '{"version":9,"token":"x"}',
+      '{"version":1,"token":42}',
+    ]) {
       const result = loadToken(fakeStorage({ [TOKEN_KEY]: raw }));
       expect(result.token, raw).toBeNull();
       expect(result.error, raw).toBeTruthy();

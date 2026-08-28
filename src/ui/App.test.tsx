@@ -50,7 +50,13 @@ function prNode(number: number, overrides: Record<string, unknown> = {}) {
     reviewRequests: { totalCount: 0 },
     latestReviews: { nodes: [] },
     commits: {
-      nodes: [{ commit: { statusCheckRollup: { state: 'SUCCESS', contexts: { totalCount: 0, nodes: [] } } } }],
+      nodes: [
+        {
+          commit: {
+            statusCheckRollup: { state: 'SUCCESS', contexts: { totalCount: 0, nodes: [] } },
+          },
+        },
+      ],
     },
     ...overrides,
   };
@@ -133,7 +139,9 @@ describe('App — first run', () => {
   it('asks for a PR when a token is stored but the board is empty, and does not call GitHub', async () => {
     const fetchImpl = vi.fn();
     render(
-      <App deps={{ fetchImpl, storage: fakeStorage({ [TOKEN_KEY]: storedToken }), clock, nowMs }} />,
+      <App
+        deps={{ fetchImpl, storage: fakeStorage({ [TOKEN_KEY]: storedToken }), clock, nowMs }}
+      />,
     );
 
     expect(await screen.findByText(/add a pull request/i)).toBeInTheDocument();
@@ -147,11 +155,33 @@ describe('App — the board', () => {
       pr0: prNode(4821),
       pr1: prNode(4790, {
         commits: {
-          nodes: [{ commit: { statusCheckRollup: { state: 'FAILURE', contexts: { totalCount: 1, nodes: [{ __typename: 'CheckRun', name: 'unit', conclusion: 'FAILURE', status: 'COMPLETED' }] } } } }],
+          nodes: [
+            {
+              commit: {
+                statusCheckRollup: {
+                  state: 'FAILURE',
+                  contexts: {
+                    totalCount: 1,
+                    nodes: [
+                      {
+                        __typename: 'CheckRun',
+                        name: 'unit',
+                        conclusion: 'FAILURE',
+                        status: 'COMPLETED',
+                      },
+                    ],
+                  },
+                },
+              },
+            },
+          ],
         },
       }),
     });
-    const storage = fakeStorage({ [TOKEN_KEY]: storedToken, [TRACKED_PRS_KEY]: storedPrs(4821, 4790) });
+    const storage = fakeStorage({
+      [TOKEN_KEY]: storedToken,
+      [TRACKED_PRS_KEY]: storedPrs(4821, 4790),
+    });
     render(<App deps={{ fetchImpl, storage, clock, nowMs }} />);
 
     await waitFor(() =>
@@ -327,7 +357,10 @@ describe('App — failure handling', () => {
         { status: 200, headers: { 'content-type': 'application/json' } },
       ),
     );
-    const storage = fakeStorage({ [TOKEN_KEY]: storedToken, [TRACKED_PRS_KEY]: storedPrs(4821, 4790) });
+    const storage = fakeStorage({
+      [TOKEN_KEY]: storedToken,
+      [TRACKED_PRS_KEY]: storedPrs(4821, 4790),
+    });
     render(<App deps={{ fetchImpl, storage, clock, nowMs }} />);
 
     expect(await screen.findByText('#4821')).toBeInTheDocument();
@@ -433,7 +466,9 @@ describe('App — the token', () => {
   it('clears a rejected-token banner and resumes polling when a new token is saved', async () => {
     const fetchImpl = vi
       .fn()
-      .mockImplementationOnce(async () => jsonReply({ message: 'Bad credentials' }, { status: 401 }))
+      .mockImplementationOnce(async () =>
+        jsonReply({ message: 'Bad credentials' }, { status: 401 }),
+      )
       .mockImplementation(boardResponder({ pr0: prNode(4821) }));
     const validate = vi.fn().mockResolvedValue({ ok: true, login: 'octocat' });
     const storage = fakeStorage({ [TOKEN_KEY]: storedToken, [TRACKED_PRS_KEY]: storedPrs(4821) });
@@ -491,10 +526,12 @@ describe('App — freshness and the rate-limit backoff', () => {
       .mockImplementationOnce(async () =>
         jsonReply(
           { errors: [{ type: 'RATE_LIMITED', message: 'API rate limit exceeded' }] },
-          { headers: {
-            'content-type': 'application/json',
-            'x-ratelimit-reset': String(Date.parse(resetAt) / 1000),
-          } },
+          {
+            headers: {
+              'content-type': 'application/json',
+              'x-ratelimit-reset': String(Date.parse(resetAt) / 1000),
+            },
+          },
         ),
       )
       .mockImplementation(boardResponder({ pr0: prNode(4821) }));
@@ -552,7 +589,10 @@ describe('App — the Backports tab', () => {
   it('starts on the Board tab', async () => {
     const storage = fakeStorage({ [TOKEN_KEY]: storedToken });
     render(<App deps={{ fetchImpl: vi.fn(), storage, clock, nowMs }} />);
-    expect(await screen.findByRole('tab', { name: /board/i })).toHaveAttribute('aria-selected', 'true');
+    expect(await screen.findByRole('tab', { name: /board/i })).toHaveAttribute(
+      'aria-selected',
+      'true',
+    );
   });
 
   it('switches to Backports and shows its own empty state', async () => {
@@ -887,14 +927,20 @@ describe('App — routing', () => {
     window.history.pushState(null, '', '/pulls');
     const storage = fakeStorage({ [TOKEN_KEY]: storedToken });
     render(<App deps={{ fetchImpl: vi.fn(), storage, clock, nowMs }} />);
-    expect(await screen.findByRole('tab', { name: /board/i })).toHaveAttribute('aria-selected', 'true');
+    expect(await screen.findByRole('tab', { name: /board/i })).toHaveAttribute(
+      'aria-selected',
+      'true',
+    );
   });
 
   it('renders the Backports tab for /backports', async () => {
     window.history.pushState(null, '', '/backports');
     const storage = fakeStorage({ [TOKEN_KEY]: storedToken });
     render(<App deps={{ fetchImpl: vi.fn(), storage, clock, nowMs }} />);
-    expect(await screen.findByRole('tab', { name: /backports/i })).toHaveAttribute('aria-selected', 'true');
+    expect(await screen.findByRole('tab', { name: /backports/i })).toHaveAttribute(
+      'aria-selected',
+      'true',
+    );
   });
 
   it('redirects / to /pulls', async () => {
@@ -927,7 +973,10 @@ describe('App — routing', () => {
     window.history.pushState(null, '', '/backports');
     const storage = fakeStorage({ [TOKEN_KEY]: storedToken });
     render(<App deps={{ fetchImpl: vi.fn(), storage, clock, nowMs }} />);
-    expect(await screen.findByRole('tab', { name: /backports/i })).toHaveAttribute('aria-selected', 'true');
+    expect(await screen.findByRole('tab', { name: /backports/i })).toHaveAttribute(
+      'aria-selected',
+      'true',
+    );
 
     window.history.back();
 

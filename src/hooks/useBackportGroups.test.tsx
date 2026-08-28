@@ -198,7 +198,9 @@ describe('useBackportGroups — filling slots', () => {
       number: 4840,
       addedAt: '2026-08-27T12:00:00Z',
     });
-    expect(JSON.parse(storage.getItem(BACKPORT_GROUPS_KEY) ?? '').groups[0].slots[0].pr.number).toBe(4840);
+    expect(
+      JSON.parse(storage.getItem(BACKPORT_GROUPS_KEY) ?? '').groups[0].slots[0].pr.number,
+    ).toBe(4840);
   });
 
   it('replaces the PR in an already-filled slot', () => {

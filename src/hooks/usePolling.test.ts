@@ -136,7 +136,10 @@ describe('usePolling', () => {
   it('runs a poll blocked by the guard once the in-flight one finishes', async () => {
     const releases: Array<() => void> = [];
     const poll = vi.fn().mockImplementation(
-      () => new Promise<void>((resolve) => { releases.push(resolve); }),
+      () =>
+        new Promise<void>((resolve) => {
+          releases.push(resolve);
+        }),
     );
     const { result } = renderHook(() => usePolling({ enabled: true, intervalMs: 15000, poll }));
     expect(poll).toHaveBeenCalledTimes(1);
@@ -162,7 +165,10 @@ describe('usePolling', () => {
   it('coalesces any number of blocked calls into exactly one follow-up', async () => {
     const releases: Array<() => void> = [];
     const poll = vi.fn().mockImplementation(
-      () => new Promise<void>((resolve) => { releases.push(resolve); }),
+      () =>
+        new Promise<void>((resolve) => {
+          releases.push(resolve);
+        }),
     );
     const { result } = renderHook(() => usePolling({ enabled: true, intervalMs: 15000, poll }));
 
@@ -216,7 +222,10 @@ describe('usePolling', () => {
   it('reports whether a poll is in flight', async () => {
     let release: (() => void) | undefined;
     const poll = vi.fn().mockImplementation(
-      () => new Promise<void>((resolve) => { release = resolve; }),
+      () =>
+        new Promise<void>((resolve) => {
+          release = resolve;
+        }),
     );
     const { result } = renderHook(() => usePolling({ enabled: true, intervalMs: 15000, poll }));
     expect(result.current.isPolling).toBe(true);

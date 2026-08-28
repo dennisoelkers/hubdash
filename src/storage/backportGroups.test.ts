@@ -24,7 +24,15 @@ function fakeStorage(initial: Record<string, string> = {}): Storage {
 const group: BackportGroup = {
   main: { owner: 'Example', repo: 'example-server', number: 4821, addedAt: '2026-08-01T00:00:00Z' },
   slots: [
-    { version: '6.2', pr: { owner: 'Example', repo: 'example-server', number: 4840, addedAt: '2026-08-02T00:00:00Z' } },
+    {
+      version: '6.2',
+      pr: {
+        owner: 'Example',
+        repo: 'example-server',
+        number: 4840,
+        addedAt: '2026-08-02T00:00:00Z',
+      },
+    },
     { version: '6.1', pr: null },
   ],
   addedAt: '2026-08-20T00:00:00Z',
@@ -54,12 +62,16 @@ describe('loadBackportGroups', () => {
 
   it('rejects a wrong-shaped envelope', () => {
     expect(loadBackportGroups(fakeStorage({ [BACKPORT_GROUPS_KEY]: '[]' })).error).toBeTruthy();
-    expect(loadBackportGroups(fakeStorage({ [BACKPORT_GROUPS_KEY]: '{"groups":[]}' })).error).toBeTruthy();
+    expect(
+      loadBackportGroups(fakeStorage({ [BACKPORT_GROUPS_KEY]: '{"groups":[]}' })).error,
+    ).toBeTruthy();
   });
 
   it('reports a wrong shape rather than a version problem when version is absent', () => {
     const raw = JSON.stringify({ groups: [] });
-    expect(loadBackportGroups(fakeStorage({ [BACKPORT_GROUPS_KEY]: raw })).error).toMatch(/could not be read/i);
+    expect(loadBackportGroups(fakeStorage({ [BACKPORT_GROUPS_KEY]: raw })).error).toMatch(
+      /could not be read/i,
+    );
   });
 
   it('rejects an unknown version', () => {
@@ -114,13 +126,19 @@ describe('loadBackportGroups', () => {
       addedAt: group.addedAt,
     };
     const storage = fakeStorage(stored([legacyGroup], 1));
-    expect(loadBackportGroups(storage)).toEqual({ groups: [{ ...legacyGroup, archived: false }], error: null });
+    expect(loadBackportGroups(storage)).toEqual({
+      groups: [{ ...legacyGroup, archived: false }],
+      error: null,
+    });
   });
 
   it('round-trips a version-2 group whose archived is true', () => {
     const storage = fakeStorage();
     saveBackportGroups([{ ...group, archived: true }], storage);
-    expect(loadBackportGroups(storage)).toEqual({ groups: [{ ...group, archived: true }], error: null });
+    expect(loadBackportGroups(storage)).toEqual({
+      groups: [{ ...group, archived: true }],
+      error: null,
+    });
   });
 
   it('rejects a version-2 group missing archived', () => {
@@ -131,7 +149,11 @@ describe('loadBackportGroups', () => {
   });
 
   it('rejects a version-1 payload whose groups do not match the legacy shape', () => {
-    const bad = { main: { owner: 'a', repo: 'b', number: 0, addedAt: 'x' }, slots: [], addedAt: '2026-08-01T00:00:00Z' };
+    const bad = {
+      main: { owner: 'a', repo: 'b', number: 0, addedAt: 'x' },
+      slots: [],
+      addedAt: '2026-08-01T00:00:00Z',
+    };
     const result = loadBackportGroups(fakeStorage(stored([bad], 1)));
     expect(result.groups).toEqual([]);
     expect(result.error).toBeTruthy();

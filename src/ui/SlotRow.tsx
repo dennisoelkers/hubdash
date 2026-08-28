@@ -176,16 +176,18 @@ export function SlotRow({ slot, entries, onFill, onRemoveVersion }: SlotRowProps
         >
           {editing ? 'cancel' : slot.pr === null ? '+ link' : 'replace'}
         </IconButton>
-        <IconButton
-          type="button"
-          aria-label={`Remove ${slot.version}`}
-          onClick={onRemoveVersion}
-        >
+        <IconButton type="button" aria-label={`Remove ${slot.version}`} onClick={onRemoveVersion}>
           ✕
         </IconButton>
       </Row>
       {editing ? (
-        <Row as="form" onSubmit={(event) => { event.preventDefault(); fill(value); }}>
+        <Row
+          as="form"
+          onSubmit={(event) => {
+            event.preventDefault();
+            fill(value);
+          }}
+        >
           <label htmlFor={inputId} style={{ position: 'absolute', left: '-9999px' }}>
             Pull request URL
           </label>

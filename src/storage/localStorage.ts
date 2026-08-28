@@ -35,11 +35,7 @@ export function readKey(storage: Storage | null | undefined, key: string): strin
   }
 }
 
-export function writeKey(
-  storage: Storage | null | undefined,
-  key: string,
-  value: string,
-): void {
+export function writeKey(storage: Storage | null | undefined, key: string, value: string): void {
   const target = resolveStorage(storage);
   if (!target) return;
   try {

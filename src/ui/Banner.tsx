@@ -34,7 +34,11 @@ const Dismiss = styled.button`
 
 export function Banner({ tone, children, onDismiss }: BannerProps) {
   return (
-    <Wrapper role="alert" data-testid="banner" $tone={tone === 'bad' ? tokens.color.bad : tokens.color.warn}>
+    <Wrapper
+      role="alert"
+      data-testid="banner"
+      $tone={tone === 'bad' ? tokens.color.bad : tokens.color.warn}
+    >
       <span>{children}</span>
       {onDismiss ? (
         <Dismiss type="button" aria-label="Dismiss" onClick={onDismiss}>

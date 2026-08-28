@@ -327,9 +327,7 @@ export function App({ deps = {} }: { deps?: AppDeps } = {}) {
       {transportError === null ? null : (
         <Banner
           tone={transportError.kind === 'network' ? 'warn' : 'bad'}
-          onDismiss={
-            transportError.kind === 'auth' ? undefined : () => reportTransportError(null)
-          }
+          onDismiss={transportError.kind === 'auth' ? undefined : () => reportTransportError(null)}
         >
           {bannerText(transportError)}
         </Banner>

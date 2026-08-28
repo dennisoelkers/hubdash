@@ -33,7 +33,9 @@ describe('useTrackedPrs', () => {
   it('loads what was stored', () => {
     const stored = JSON.stringify({
       version: 1,
-      prs: [{ owner: 'Example', repo: 'example-server', number: 4821, addedAt: '2026-08-01T00:00:00Z' }],
+      prs: [
+        { owner: 'Example', repo: 'example-server', number: 4821, addedAt: '2026-08-01T00:00:00Z' },
+      ],
     });
     const { result } = setup(fakeStorage({ [TRACKED_PRS_KEY]: stored }));
     expect(result.current.prs).toHaveLength(1);

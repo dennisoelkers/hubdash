@@ -14,11 +14,7 @@ export type PrKey = string;
 export type CiState = 'success' | 'failure' | 'pending' | 'none';
 
 /** GitHub's `reviewDecision`. `null` means the repo requires no review. */
-export type ReviewDecision =
-  | 'APPROVED'
-  | 'CHANGES_REQUESTED'
-  | 'REVIEW_REQUIRED'
-  | null;
+export type ReviewDecision = 'APPROVED' | 'CHANGES_REQUESTED' | 'REVIEW_REQUIRED' | null;
 
 /** GitHub's `mergeable`. `UNKNOWN` means "still being computed". */
 export type MergeableState = 'MERGEABLE' | 'CONFLICTING' | 'UNKNOWN';
@@ -99,9 +95,7 @@ export type TransportError =
   | { kind: 'server'; status: number; message: string }
   | { kind: 'malformed'; message: string };
 
-export type FetchOutcome =
-  | { ok: true; result: PollResult }
-  | { ok: false; error: TransportError };
+export type FetchOutcome = { ok: true; result: PollResult } | { ok: false; error: TransportError };
 
 /** One target version of a backport group, and the PR filling it (if any). */
 export type BackportSlot = {

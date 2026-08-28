@@ -8,7 +8,11 @@ function tracked(number: number) {
   return { owner: 'Example', repo: 'example-server', number, addedAt: '2026-08-01T00:00:00Z' };
 }
 
-function group(mainNumber: number, addedAt: string, overrides: Partial<BackportGroup> = {}): BackportGroup {
+function group(
+  mainNumber: number,
+  addedAt: string,
+  overrides: Partial<BackportGroup> = {},
+): BackportGroup {
   return { main: tracked(mainNumber), slots: [], addedAt, archived: false, ...overrides };
 }
 
@@ -59,9 +63,7 @@ describe('BackportsTab', () => {
 
   it('flashes only the group whose key is flashed', () => {
     const groups = [group(4821, '2026-08-01T00:00:00Z'), group(4790, '2026-08-20T00:00:00Z')];
-    render(
-      <BackportsTab {...baseProps({ groups, flashedKey: 'example/example-server#4821' })} />,
-    );
+    render(<BackportsTab {...baseProps({ groups, flashedKey: 'example/example-server#4821' })} />);
     const flashed = screen
       .getAllByTestId('backport-group-card')
       .filter((card) => card.getAttribute('data-flashed') === 'true');
@@ -71,7 +73,11 @@ describe('BackportsTab', () => {
 
   it('routes onRemoveGroup with the right group key', async () => {
     const onRemoveGroup = vi.fn();
-    render(<BackportsTab {...baseProps({ groups: [group(4821, '2026-08-20T00:00:00Z')], onRemoveGroup })} />);
+    render(
+      <BackportsTab
+        {...baseProps({ groups: [group(4821, '2026-08-20T00:00:00Z')], onRemoveGroup })}
+      />,
+    );
     const { default: userEvent } = await import('@testing-library/user-event');
     await userEvent.click(screen.getByRole('button', { name: /remove group/i }));
     expect(onRemoveGroup).toHaveBeenCalledWith('example/example-server#4821');
@@ -147,7 +153,10 @@ describe('BackportGroupArchiveSection via BackportsTab', () => {
   it('auto-expands the archive section when the flashed group is archived', () => {
     const groups = [group(4821, '2026-08-20T00:00:00Z', { archived: true })];
     render(<BackportsTab {...baseProps({ groups, flashedKey: 'example/example-server#4821' })} />);
-    expect(screen.getByRole('button', { name: /archive/i })).toHaveAttribute('aria-expanded', 'true');
+    expect(screen.getByRole('button', { name: /archive/i })).toHaveAttribute(
+      'aria-expanded',
+      'true',
+    );
     expect(screen.getByText('#4821')).toBeInTheDocument();
   });
 });

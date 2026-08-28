@@ -1,8 +1,6 @@
 export type ParsedPr = { owner: string; repo: string; number: number };
 
-export type ParseResult =
-  | { ok: true; value: ParsedPr }
-  | { ok: false; error: string };
+export type ParseResult = { ok: true; value: ParsedPr } | { ok: false; error: string };
 
 // Owner excludes ':' so a URL scheme cannot match it; repo excludes '/' so a
 // path cannot. Without both, this matched entire URLs with a numeric fragment

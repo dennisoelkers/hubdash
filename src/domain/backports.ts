@@ -1,11 +1,4 @@
-import type {
-  BackportGroup,
-  BackportSlot,
-  PrEntry,
-  PrKey,
-  SlotState,
-  TrackedPr,
-} from '../types';
+import type { BackportGroup, BackportSlot, PrEntry, PrKey, SlotState, TrackedPr } from '../types';
 import { prKey } from './prKey';
 
 /**
@@ -62,9 +55,7 @@ export type RollUp = { landed: number; total: number };
  * numbers: it is the thing being backported, not a backport.
  */
 export function rollUpFor(group: BackportGroup, entries: Map<PrKey, PrEntry>): RollUp {
-  const landed = group.slots.filter(
-    (slot) => slotStateFor(slot, entries).kind === 'merged',
-  ).length;
+  const landed = group.slots.filter((slot) => slotStateFor(slot, entries).kind === 'merged').length;
   return { landed, total: group.slots.length };
 }
 

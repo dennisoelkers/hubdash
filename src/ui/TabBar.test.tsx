@@ -12,7 +12,10 @@ describe('TabBar', () => {
 
   it('marks the active tab selected', () => {
     render(<TabBar active="backports" onChange={() => {}} boardCount={0} backportsCount={0} />);
-    expect(screen.getByRole('tab', { name: /backports/i })).toHaveAttribute('aria-selected', 'true');
+    expect(screen.getByRole('tab', { name: /backports/i })).toHaveAttribute(
+      'aria-selected',
+      'true',
+    );
     expect(screen.getByRole('tab', { name: /board/i })).toHaveAttribute('aria-selected', 'false');
   });
 

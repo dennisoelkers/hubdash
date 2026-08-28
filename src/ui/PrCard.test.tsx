@@ -44,7 +44,11 @@ describe('PrCard — a resolved PR', () => {
   it('renders every badge the PR earns', () => {
     render(
       <PrCard
-        entry={okEntry({ reviewDecision: 'CHANGES_REQUESTED', ci: 'failure', failingCheckCount: 2 })}
+        entry={okEntry({
+          reviewDecision: 'CHANGES_REQUESTED',
+          ci: 'failure',
+          failingCheckCount: 2,
+        })}
         onRemove={() => {}}
       />,
     );
@@ -118,9 +122,7 @@ describe('PrCard — flashing a duplicate', () => {
   it('renders a flashed card where scrollIntoView does not exist', () => {
     // The default jsdom environment: no scrollIntoView at all. An unguarded
     // call would take out the card, and with it the board.
-    expect(() =>
-      render(<PrCard entry={okEntry()} onRemove={() => {}} flashed />),
-    ).not.toThrow();
+    expect(() => render(<PrCard entry={okEntry()} onRemove={() => {}} flashed />)).not.toThrow();
   });
 });
 

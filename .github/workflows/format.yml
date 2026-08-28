@@ -1,0 +1,42 @@
+name: Format
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: write
+
+concurrency:
+  group: format-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  format:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - run: npm ci
+
+      - run: npm run format
+
+      # A commit pushed with the default GITHUB_TOKEN doesn't trigger other
+      # workflow runs, so this can't loop back into itself — and there's
+      # nothing to commit when oxfmt found nothing to reformat.
+      - name: Commit formatting changes, if any
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          if git diff --quiet -- src vite.config.ts vitest.config.ts; then
+            echo "Nothing to format."
+            exit 0
+          fi
+          git add src vite.config.ts vitest.config.ts
+          git commit -m "style: auto-format with oxfmt"
+          git push

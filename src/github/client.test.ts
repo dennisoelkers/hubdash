@@ -33,7 +33,15 @@ function okBody() {
           mergeable: 'MERGEABLE',
           reviewRequests: { totalCount: 0 },
           latestReviews: { nodes: [{ state: 'APPROVED' }] },
-          commits: { nodes: [{ commit: { statusCheckRollup: { state: 'SUCCESS', contexts: { totalCount: 0, nodes: [] } } } }] },
+          commits: {
+            nodes: [
+              {
+                commit: {
+                  statusCheckRollup: { state: 'SUCCESS', contexts: { totalCount: 0, nodes: [] } },
+                },
+              },
+            ],
+          },
         },
       },
     },
@@ -84,7 +92,9 @@ describe('fetchBoard — transport failures', () => {
   });
 
   it('maps 401 to an auth error', async () => {
-    const fetchImpl = vi.fn().mockResolvedValue(jsonResponse({ message: 'Bad credentials' }, { status: 401 }));
+    const fetchImpl = vi
+      .fn()
+      .mockResolvedValue(jsonResponse({ message: 'Bad credentials' }, { status: 401 }));
     const outcome = await fetchBoard('t', prs, { fetchImpl });
     if (outcome.ok) throw new Error('expected failure');
     expect(outcome.error.kind).toBe('auth');
@@ -92,10 +102,17 @@ describe('fetchBoard — transport failures', () => {
 
   it('maps a 403 with an exhausted rate limit to a rate-limit error, with the reset time', async () => {
     const fetchImpl = vi.fn().mockResolvedValue(
-      jsonResponse({ message: 'API rate limit exceeded' }, {
-        status: 403,
-        headers: { 'content-type': 'application/json', 'x-ratelimit-remaining': '0', 'x-ratelimit-reset': '1787000000' },
-      }),
+      jsonResponse(
+        { message: 'API rate limit exceeded' },
+        {
+          status: 403,
+          headers: {
+            'content-type': 'application/json',
+            'x-ratelimit-remaining': '0',
+            'x-ratelimit-reset': '1787000000',
+          },
+        },
+      ),
     );
     const outcome = await fetchBoard('t', prs, { fetchImpl });
     if (outcome.ok) throw new Error('expected failure');
@@ -106,10 +123,13 @@ describe('fetchBoard — transport failures', () => {
 
   it('maps a 403 with budget remaining to an auth error', async () => {
     const fetchImpl = vi.fn().mockResolvedValue(
-      jsonResponse({ message: 'Resource not accessible' }, {
-        status: 403,
-        headers: { 'content-type': 'application/json', 'x-ratelimit-remaining': '4000' },
-      }),
+      jsonResponse(
+        { message: 'Resource not accessible' },
+        {
+          status: 403,
+          headers: { 'content-type': 'application/json', 'x-ratelimit-remaining': '4000' },
+        },
+      ),
     );
     const outcome = await fetchBoard('t', prs, { fetchImpl });
     if (outcome.ok) throw new Error('expected failure');
@@ -140,16 +160,20 @@ describe('fetchBoard — transport failures', () => {
   });
 
   it('maps a GraphQL RATE_LIMITED error to a rate-limit error even on a 200', async () => {
-    const fetchImpl = vi.fn().mockResolvedValue(
-      jsonResponse({ errors: [{ type: 'RATE_LIMITED', message: 'API rate limit exceeded' }] }),
-    );
+    const fetchImpl = vi
+      .fn()
+      .mockResolvedValue(
+        jsonResponse({ errors: [{ type: 'RATE_LIMITED', message: 'API rate limit exceeded' }] }),
+      );
     const outcome = await fetchBoard('t', prs, { fetchImpl });
     if (outcome.ok) throw new Error('expected failure');
     expect(outcome.error.kind).toBe('rateLimited');
   });
 
   it('maps a 200 with a bad-credentials GraphQL error to an auth error', async () => {
-    const fetchImpl = vi.fn().mockResolvedValue(jsonResponse({ errors: [{ message: 'Bad credentials' }] }));
+    const fetchImpl = vi
+      .fn()
+      .mockResolvedValue(jsonResponse({ errors: [{ message: 'Bad credentials' }] }));
     const outcome = await fetchBoard('t', prs, { fetchImpl });
     if (outcome.ok) throw new Error('expected failure');
     expect(outcome.error.kind).toBe('auth');
@@ -188,9 +212,11 @@ describe('fetchBoard — transport failures', () => {
   });
 
   it('maps a request-level UNAUTHORIZED type to an auth error without reading the prose', async () => {
-    const fetchImpl = vi.fn().mockResolvedValue(
-      jsonResponse({ errors: [{ type: 'UNAUTHORIZED', message: 'Resource not accessible.' }] }),
-    );
+    const fetchImpl = vi
+      .fn()
+      .mockResolvedValue(
+        jsonResponse({ errors: [{ type: 'UNAUTHORIZED', message: 'Resource not accessible.' }] }),
+      );
     const outcome = await fetchBoard('t', prs, { fetchImpl });
     if (outcome.ok) throw new Error('expected failure');
     expect(outcome.error.kind).toBe('auth');
@@ -198,9 +224,12 @@ describe('fetchBoard — transport failures', () => {
 
   it('reads the reset time from the headers for a GraphQL RATE_LIMITED on a 200', async () => {
     const fetchImpl = vi.fn().mockResolvedValue(
-      jsonResponse({ errors: [{ type: 'RATE_LIMITED', message: 'API rate limit exceeded' }] }, {
-        headers: { 'content-type': 'application/json', 'x-ratelimit-reset': '1787000000' },
-      }),
+      jsonResponse(
+        { errors: [{ type: 'RATE_LIMITED', message: 'API rate limit exceeded' }] },
+        {
+          headers: { 'content-type': 'application/json', 'x-ratelimit-reset': '1787000000' },
+        },
+      ),
     );
     const outcome = await fetchBoard('t', prs, { fetchImpl });
     if (outcome.ok) throw new Error('expected failure');
@@ -214,10 +243,13 @@ describe('fetchBoard — transport failures', () => {
     // and this call sits outside the try that wraps the fetch — it would reject
     // straight out of fetchBoard into React.
     const fetchImpl = vi.fn().mockResolvedValue(
-      jsonResponse({}, {
-        status: 429,
-        headers: { 'content-type': 'application/json', 'x-ratelimit-reset': '99999999999999' },
-      }),
+      jsonResponse(
+        {},
+        {
+          status: 429,
+          headers: { 'content-type': 'application/json', 'x-ratelimit-reset': '99999999999999' },
+        },
+      ),
     );
     const outcome = await fetchBoard('t', prs, { fetchImpl });
     if (outcome.ok) throw new Error('expected failure');
@@ -227,7 +259,9 @@ describe('fetchBoard — transport failures', () => {
   });
 
   it('never puts the token in an error message', async () => {
-    const fetchImpl = vi.fn().mockResolvedValue(jsonResponse({ message: 'Bad credentials' }, { status: 401 }));
+    const fetchImpl = vi
+      .fn()
+      .mockResolvedValue(jsonResponse({ message: 'Bad credentials' }, { status: 401 }));
     const outcome = await fetchBoard('ghp_secretvalue', prs, { fetchImpl });
     if (outcome.ok) throw new Error('expected failure');
     expect(JSON.stringify(outcome.error)).not.toContain('ghp_secretvalue');
@@ -236,13 +270,17 @@ describe('fetchBoard — transport failures', () => {
 
 describe('validateToken', () => {
   it('returns the login on success', async () => {
-    const fetchImpl = vi.fn().mockResolvedValue(jsonResponse({ data: { viewer: { login: 'octocat' } } }));
+    const fetchImpl = vi
+      .fn()
+      .mockResolvedValue(jsonResponse({ data: { viewer: { login: 'octocat' } } }));
     const outcome = await validateToken('t', { fetchImpl });
     expect(outcome).toEqual({ ok: true, login: 'octocat' });
   });
 
   it('reports a failure for a rejected token', async () => {
-    const fetchImpl = vi.fn().mockResolvedValue(jsonResponse({ message: 'Bad credentials' }, { status: 401 }));
+    const fetchImpl = vi
+      .fn()
+      .mockResolvedValue(jsonResponse({ message: 'Bad credentials' }, { status: 401 }));
     const outcome = await validateToken('t', { fetchImpl });
     expect(outcome.ok).toBe(false);
   });

@@ -93,7 +93,9 @@ describe('parseResponse — happy path', () => {
     const raw = response({
       pr0: {
         pullRequest: prNode({
-          latestReviews: { nodes: [{ state: 'APPROVED' }, { state: 'COMMENTED' }, { state: 'APPROVED' }] },
+          latestReviews: {
+            nodes: [{ state: 'APPROVED' }, { state: 'COMMENTED' }, { state: 'APPROVED' }],
+          },
         }),
       },
     });

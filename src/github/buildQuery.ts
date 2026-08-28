@@ -58,12 +58,7 @@ export function buildQuery(prs: TrackedPr[]): string {
     )
     .join('\n');
 
-  const query = [
-    'query Board {',
-    '  rateLimit { limit cost remaining resetAt }',
-    fields,
-    '}',
-  ]
+  const query = ['query Board {', '  rateLimit { limit cost remaining resetAt }', fields, '}']
     .filter((line) => line !== '')
     .join('\n');
 

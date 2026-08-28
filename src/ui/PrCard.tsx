@@ -132,9 +132,7 @@ export function PrCard({ entry, onRemove, flashed = false }: PrCardProps) {
 
   const isDraft = entry.status === 'ok' && entry.pr.isDraft;
   const nameWithOwner =
-    entry.status === 'ok'
-      ? entry.pr.nameWithOwner
-      : `${entry.tracked.owner}/${entry.tracked.repo}`;
+    entry.status === 'ok' ? entry.pr.nameWithOwner : `${entry.tracked.owner}/${entry.tracked.repo}`;
   const number = entry.status === 'ok' ? entry.pr.number : entry.tracked.number;
 
   return (
