@@ -60,3 +60,7 @@ React 19 + TypeScript (strict) + Vite 6, styled-components for styling, [wouter]
 ## Design docs
 
 The reasoning behind hubdash's features — data flow, storage format, edge cases considered — is written up in [`docs/superpowers/specs`](docs/superpowers/specs), with the implementation plans that built them in [`docs/superpowers/plans`](docs/superpowers/plans).
+
+## License
+
+[MIT](LICENSE)
