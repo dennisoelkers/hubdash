@@ -14,7 +14,11 @@ There's no server. hubdash is a static single-page app that talks directly to th
 
 Merged or closed PRs drop into a collapsed Archive section instead of cluttering the board.
 
+<img width="3840" height="1845" alt="image" src="https://github.com/user-attachments/assets/d1e66ec1-7d32-485f-88f6-70099bf32a89" />
+
 **Backports tab** — track a "main" PR alongside every version it needs to land in. Each target version is a slot; drop the actual backport PR's link into a slot to fill it, and hubdash shows merge status per slot and rolls it up as "N of M landed". A group where everything has landed is marked green, with a button to archive it once you're done tracking it.
+
+<img width="3817" height="1856" alt="image" src="https://github.com/user-attachments/assets/05f0ed4e-4b77-4173-8027-6c6f20d7332b" />
 
 Both tabs poll GitHub every 15 seconds, share one request per unique PR (so a PR tracked on both tabs only costs one query), and are reachable at their own URLs (`/pulls`, `/backports`) — bookmarkable, shareable, and wired up to the browser's back/forward buttons.
 
