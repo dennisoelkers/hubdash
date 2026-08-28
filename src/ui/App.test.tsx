@@ -545,6 +545,16 @@ describe('App — freshness and the rate-limit backoff', () => {
     );
     expect(fetchImpl).toHaveBeenCalledTimes(1);
 
+    // `findByTestId` resolves once the banner's *DOM* mutation lands, but
+    // `usePolling`'s own interval-cleanup effect is a separate, passive
+    // effect scheduled off that same render — under fake timers there's no
+    // guarantee it has actually run yet. An empty `act()` forces every
+    // pending effect to flush before the next line, so the interval that
+    // was created while `canPoll` was still true is reliably torn down
+    // before advancing time — otherwise this is a genuine race: on a slow
+    // enough run, the still-alive interval fires once more for free.
+    await act(async () => {});
+
     // Backed off: ticks while the limit stands cost nothing.
     await act(async () => {
       vi.advanceTimersByTime(POLL_INTERVAL_MS);
