@@ -4,6 +4,8 @@ A tiny, backend-free dashboard for tracking your own GitHub pull requests — an
 
 There's no server. hubdash is a static single-page app that talks directly to the GitHub GraphQL API from your browser, using a personal access token you provide. Everything it knows about your PRs lives in `localStorage`.
 
+**[Try it live →](https://dennisoelkers.github.io/hubdash/)** — hosted on GitHub Pages, deployed automatically from `main` (see [Deploying](#deploying)).
+
 ## What it does
 
 **Board tab** — paste or drop a PR link and hubdash tracks it, sorting cards into three columns based on live status from GitHub:
