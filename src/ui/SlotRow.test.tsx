@@ -6,7 +6,7 @@ import type { BackportSlot, PrEntry, PrKey } from '../types';
 import { SlotRow } from './SlotRow';
 
 function tracked(number: number) {
-  return { owner: 'Graylog2', repo: 'graylog2-server', number, addedAt: '2026-08-01T00:00:00Z' };
+  return { owner: 'Example', repo: 'example-server', number, addedAt: '2026-08-01T00:00:00Z' };
 }
 
 function entryMap(...specs: Array<[number, 'OPEN' | 'CLOSED' | 'MERGED']>): Map<PrKey, PrEntry> {
@@ -52,7 +52,7 @@ describe('SlotRow — display', () => {
 
   it('shows the GitHub message for an errored PR', () => {
     const map = new Map<PrKey, PrEntry>([
-      ['graylog2/graylog2-server#4840', { status: 'error', key: 'graylog2/graylog2-server#4840', tracked: tracked(4840), message: 'Not found' }],
+      ['example/example-server#4840', { status: 'error', key: 'example/example-server#4840', tracked: tracked(4840), message: 'Not found' }],
     ]);
     render(<SlotRow slot={FILLED} entries={map} onFill={() => ({ ok: true })} onRemoveVersion={() => {}} />);
     expect(screen.getByText(/not found/i)).toBeInTheDocument();
@@ -62,7 +62,7 @@ describe('SlotRow — display', () => {
     render(<SlotRow slot={FILLED} entries={entryMap([4840, 'OPEN'])} onFill={() => ({ ok: true })} onRemoveVersion={() => {}} />);
     expect(screen.getByRole('link', { name: '#4840' })).toHaveAttribute(
       'href',
-      'https://github.com/Graylog2/graylog2-server/pull/4840',
+      'https://github.com/Example/example-server/pull/4840',
     );
   });
 });
@@ -73,9 +73,9 @@ describe('SlotRow — filling by drop', () => {
     render(<SlotRow slot={EMPTY} entries={new Map()} onFill={onFill} onRemoveVersion={() => {}} />);
     const row = screen.getByTestId('slot-row');
     const event = new Event('drop', { bubbles: true, cancelable: true });
-    Object.assign(event, { dataTransfer: dataTransfer('https://github.com/Graylog2/graylog2-server/pull/4839') });
+    Object.assign(event, { dataTransfer: dataTransfer('https://github.com/Example/example-server/pull/4839') });
     act(() => void row.dispatchEvent(event));
-    expect(onFill).toHaveBeenCalledWith({ owner: 'Graylog2', repo: 'graylog2-server', number: 4839 });
+    expect(onFill).toHaveBeenCalledWith({ owner: 'Example', repo: 'example-server', number: 4839 });
   });
 
   it('shows a parse error inline without calling onFill', () => {
@@ -94,7 +94,7 @@ describe('SlotRow — filling by drop', () => {
     render(<SlotRow slot={EMPTY} entries={new Map()} onFill={onFill} onRemoveVersion={() => {}} />);
     const row = screen.getByTestId('slot-row');
     const event = new Event('drop', { bubbles: true, cancelable: true });
-    Object.assign(event, { dataTransfer: dataTransfer('https://github.com/Graylog2/graylog2-server/pull/4840') });
+    Object.assign(event, { dataTransfer: dataTransfer('https://github.com/Example/example-server/pull/4840') });
     act(() => void row.dispatchEvent(event));
     expect(screen.getByRole('alert')).toHaveTextContent(/6\.1 slot/);
   });
@@ -114,7 +114,7 @@ describe('SlotRow — filling by drop', () => {
     try {
       const row = screen.getByTestId('slot-row');
       const event = new Event('drop', { bubbles: true, cancelable: true });
-      Object.assign(event, { dataTransfer: dataTransfer('https://github.com/Graylog2/graylog2-server/pull/4839') });
+      Object.assign(event, { dataTransfer: dataTransfer('https://github.com/Example/example-server/pull/4839') });
       act(() => void row.dispatchEvent(event));
       expect(windowListener).not.toHaveBeenCalled();
     } finally {
@@ -129,8 +129,8 @@ describe('SlotRow — filling by click-to-paste', () => {
     render(<SlotRow slot={EMPTY} entries={new Map()} onFill={onFill} onRemoveVersion={() => {}} />);
     await userEvent.click(screen.getByRole('button', { name: /add a link/i }));
     const input = screen.getByLabelText(/pull request url/i);
-    await userEvent.type(input, 'https://github.com/Graylog2/graylog2-server/pull/4839{Enter}');
-    expect(onFill).toHaveBeenCalledWith({ owner: 'Graylog2', repo: 'graylog2-server', number: 4839 });
+    await userEvent.type(input, 'https://github.com/Example/example-server/pull/4839{Enter}');
+    expect(onFill).toHaveBeenCalledWith({ owner: 'Example', repo: 'example-server', number: 4839 });
   });
 
   it('labels the toggle for what it actually does', () => {

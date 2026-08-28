@@ -22,8 +22,8 @@ function fakeStorage(initial: Record<string, string> = {}): Storage {
 }
 
 const pr: TrackedPr = {
-  owner: 'Graylog2',
-  repo: 'graylog2-server',
+  owner: 'Example',
+  repo: 'example-server',
   number: 4821,
   addedAt: '2026-08-27T09:00:00Z',
 };

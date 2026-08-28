@@ -26,8 +26,8 @@ function storedPrs(...numbers: number[]) {
   return JSON.stringify({
     version: 1,
     prs: numbers.map((number) => ({
-      owner: 'Graylog2',
-      repo: 'graylog2-server',
+      owner: 'Example',
+      repo: 'example-server',
       number,
       addedAt: '2026-08-27T09:00:00Z',
     })),
@@ -38,13 +38,13 @@ function prNode(number: number, overrides: Record<string, unknown> = {}) {
   return {
     number,
     title: `Change number ${number}`,
-    url: `https://github.com/Graylog2/graylog2-server/pull/${number}`,
+    url: `https://github.com/Example/example-server/pull/${number}`,
     state: 'OPEN',
     isDraft: false,
     updatedAt: '2026-08-27T10:00:00Z',
-    author: { login: 'dennisoelkers' },
+    author: { login: 'octocat' },
     baseRefName: 'master',
-    repository: { nameWithOwner: 'Graylog2/graylog2-server' },
+    repository: { nameWithOwner: 'Example/example-server' },
     reviewDecision: 'REVIEW_REQUIRED',
     mergeable: 'MERGEABLE',
     reviewRequests: { totalCount: 0 },
@@ -189,7 +189,7 @@ describe('App — the board', () => {
     await userEvent.click(screen.getByRole('button', { name: /add pr/i }));
     await userEvent.type(
       screen.getByLabelText(/pull request url/i),
-      'https://github.com/Graylog2/graylog2-server/pull/4821',
+      'https://github.com/Example/example-server/pull/4821',
     );
     await userEvent.click(screen.getByRole('button', { name: /^add$/i }));
 
@@ -219,7 +219,7 @@ describe('App — the board', () => {
     await userEvent.click(screen.getByRole('button', { name: /add pr/i }));
     await userEvent.type(
       screen.getByLabelText(/pull request url/i),
-      'https://github.com/Graylog2/graylog2-server/pull/4790',
+      'https://github.com/Example/example-server/pull/4790',
     );
     await userEvent.click(screen.getByRole('button', { name: /^add$/i }));
 
@@ -261,7 +261,7 @@ describe('App — the board', () => {
       await userEvent.click(screen.getByRole('button', { name: /add pr/i }));
       await userEvent.type(
         screen.getByLabelText(/pull request url/i),
-        'https://github.com/Graylog2/graylog2-server/pull/4821',
+        'https://github.com/Example/example-server/pull/4821',
       );
       await userEvent.click(screen.getByRole('button', { name: /^add$/i }));
 
@@ -381,7 +381,7 @@ describe('App — opening Settings automatically', () => {
 
   it('closes the auto-opened dialog after a token is saved, revealing the board', async () => {
     const fetchImpl = boardResponder({ pr0: prNode(4821) });
-    const validate = vi.fn().mockResolvedValue({ ok: true, login: 'dennisoelkers' });
+    const validate = vi.fn().mockResolvedValue({ ok: true, login: 'octocat' });
     const storage = fakeStorage({ [TRACKED_PRS_KEY]: storedPrs(4821) });
     render(<App deps={{ fetchImpl, storage, clock, nowMs, validate }} />);
 
@@ -414,7 +414,7 @@ describe('App — the token', () => {
 
   it('starts polling once a token is saved through the settings dialog', async () => {
     const fetchImpl = boardResponder({ pr0: prNode(4821) });
-    const validate = vi.fn().mockResolvedValue({ ok: true, login: 'dennisoelkers' });
+    const validate = vi.fn().mockResolvedValue({ ok: true, login: 'octocat' });
     const storage = fakeStorage({ [TRACKED_PRS_KEY]: storedPrs(4821) });
     render(<App deps={{ fetchImpl, storage, clock, nowMs, validate }} />);
 
@@ -435,7 +435,7 @@ describe('App — the token', () => {
       .fn()
       .mockImplementationOnce(async () => jsonReply({ message: 'Bad credentials' }, { status: 401 }))
       .mockImplementation(boardResponder({ pr0: prNode(4821) }));
-    const validate = vi.fn().mockResolvedValue({ ok: true, login: 'dennisoelkers' });
+    const validate = vi.fn().mockResolvedValue({ ok: true, login: 'octocat' });
     const storage = fakeStorage({ [TOKEN_KEY]: storedToken, [TRACKED_PRS_KEY]: storedPrs(4821) });
     render(<App deps={{ fetchImpl, storage, clock, nowMs, validate }} />);
 
@@ -572,7 +572,7 @@ describe('App — the Backports tab', () => {
     await userEvent.click(screen.getByRole('button', { name: /track backports/i }));
     await userEvent.type(
       screen.getByLabelText(/main pull request/i),
-      'https://github.com/Graylog2/graylog2-server/pull/4900',
+      'https://github.com/Example/example-server/pull/4900',
     );
     await userEvent.click(screen.getByRole('button', { name: /^track$/i }));
 
@@ -582,8 +582,8 @@ describe('App — the Backports tab', () => {
     // on any change to `groups` regardless of what the query contained.
     await waitFor(() => expect(fetchImpl).toHaveBeenCalledTimes(2));
     expect(aliasesIn(queryOf(fetchImpl))).toEqual([
-      'pr0 Graylog2/graylog2-server#4821',
-      'pr1 Graylog2/graylog2-server#4900',
+      'pr0 Example/example-server#4821',
+      'pr1 Example/example-server#4900',
     ]);
     expect(await screen.findByText('#4900')).toBeInTheDocument();
   });
@@ -603,7 +603,7 @@ describe('App — the Backports tab', () => {
     // owner and repo, so these are the same PR and must collapse to one alias.
     await userEvent.type(
       screen.getByLabelText(/main pull request/i),
-      'https://github.com/graylog2/GRAYLOG2-SERVER/pull/4821',
+      'https://github.com/example/EXAMPLE-SERVER/pull/4821',
     );
     await userEvent.click(screen.getByRole('button', { name: /^track$/i }));
 
@@ -611,8 +611,8 @@ describe('App — the Backports tab', () => {
     // board's own casing, because the board owns the tracked list.
     await waitFor(() => expect(fetchImpl).toHaveBeenCalledTimes(2));
     expect(aliasesIn(queryOf(fetchImpl))).toEqual([
-      'pr0 Graylog2/graylog2-server#4821',
-      'pr1 Graylog2/graylog2-server#4790',
+      'pr0 Example/example-server#4821',
+      'pr1 Example/example-server#4790',
     ]);
 
     // And the board still shows it once — a duplicated poll target would render
@@ -632,7 +632,7 @@ describe('App — the Backports tab', () => {
       await userEvent.click(screen.getByRole('button', { name: /track backports/i }));
       await userEvent.type(
         screen.getByLabelText(/main pull request/i),
-        'https://github.com/Graylog2/graylog2-server/pull/4821',
+        'https://github.com/Example/example-server/pull/4821',
       );
       if (versions !== '') await userEvent.type(screen.getByLabelText(/backport to/i), versions);
       await userEvent.click(screen.getByRole('button', { name: /^track$/i }));
@@ -661,7 +661,7 @@ describe('App — the Backports tab', () => {
     await userEvent.click(screen.getByRole('button', { name: /track backports/i }));
     await userEvent.type(
       screen.getByLabelText(/main pull request/i),
-      'https://github.com/Graylog2/graylog2-server/pull/4821',
+      'https://github.com/Example/example-server/pull/4821',
     );
     await userEvent.type(screen.getByLabelText(/backport to/i), '6.2');
     await userEvent.click(screen.getByRole('button', { name: /^track$/i }));
@@ -671,7 +671,7 @@ describe('App — the Backports tab', () => {
     Object.assign(event, {
       dataTransfer: {
         types: ['text/plain'],
-        getData: () => 'https://github.com/Graylog2/graylog2-server/pull/4840',
+        getData: () => 'https://github.com/Example/example-server/pull/4840',
       },
     });
     // Wrapped in act because the drop updates state synchronously. SlotRow's own
@@ -711,7 +711,7 @@ describe('App — the Backports tab', () => {
     Object.assign(event, {
       dataTransfer: {
         types: ['text/plain'],
-        getData: () => 'https://github.com/Graylog2/graylog2-server/pull/4821',
+        getData: () => 'https://github.com/Example/example-server/pull/4821',
       },
     });
     await act(async () => {
@@ -720,7 +720,7 @@ describe('App — the Backports tab', () => {
 
     expect(screen.getByRole('dialog', { name: /track backports/i })).toBeInTheDocument();
     expect(screen.getByLabelText(/main pull request/i)).toHaveValue(
-      'https://github.com/Graylog2/graylog2-server/pull/4821',
+      'https://github.com/Example/example-server/pull/4821',
     );
     expect(screen.getByRole('tab', { name: /board/i })).toHaveTextContent('0');
     expect(storage.getItem(TRACKED_PRS_KEY)).toBeNull();
@@ -753,7 +753,7 @@ describe('App — the Backports tab', () => {
     await userEvent.click(screen.getByRole('button', { name: /track backports/i }));
     await userEvent.type(
       screen.getByLabelText(/main pull request/i),
-      'https://github.com/Graylog2/graylog2-server/pull/4821',
+      'https://github.com/Example/example-server/pull/4821',
     );
     await userEvent.type(screen.getByLabelText(/backport to/i), '6.2');
     await userEvent.click(screen.getByRole('button', { name: /^track$/i }));
@@ -763,7 +763,7 @@ describe('App — the Backports tab', () => {
     Object.assign(event, {
       dataTransfer: {
         types: ['text/plain'],
-        getData: () => 'https://github.com/Graylog2/graylog2-server/pull/4840',
+        getData: () => 'https://github.com/Example/example-server/pull/4840',
       },
     });
     await act(async () => {
@@ -783,7 +783,7 @@ describe('App — the Backports tab', () => {
     Object.assign(event, {
       dataTransfer: {
         types: ['text/plain'],
-        getData: () => 'https://github.com/Graylog2/graylog2-server/pull/4821',
+        getData: () => 'https://github.com/Example/example-server/pull/4821',
       },
     });
     await act(async () => {
@@ -806,7 +806,7 @@ describe('App — the Backports tab', () => {
     Object.assign(event, {
       dataTransfer: {
         types: ['text/plain'],
-        getData: () => 'https://github.com/Graylog2/graylog2-server/pull/4821',
+        getData: () => 'https://github.com/Example/example-server/pull/4821',
       },
     });
     await act(async () => {
@@ -851,7 +851,7 @@ describe('App — the Backports tab', () => {
     await userEvent.click(screen.getByRole('button', { name: /track backports/i }));
     await userEvent.type(
       screen.getByLabelText(/main pull request/i),
-      'https://github.com/Graylog2/graylog2-server/pull/4821',
+      'https://github.com/Example/example-server/pull/4821',
     );
     await userEvent.type(screen.getByLabelText(/backport to/i), '6.2');
     await userEvent.click(screen.getByRole('button', { name: /^track$/i }));
@@ -861,7 +861,7 @@ describe('App — the Backports tab', () => {
     Object.assign(event, {
       dataTransfer: {
         types: ['text/plain'],
-        getData: () => 'https://github.com/Graylog2/graylog2-server/pull/4840',
+        getData: () => 'https://github.com/Example/example-server/pull/4840',
       },
     });
     await act(async () => {

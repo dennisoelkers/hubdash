@@ -3,7 +3,7 @@ import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 import { AddPrDialog } from './AddPrDialog';
 
-const URL = 'https://github.com/Graylog2/graylog2-server/pull/4821';
+const URL = 'https://github.com/Example/example-server/pull/4821';
 
 function setup(onAdd = vi.fn().mockReturnValue({ added: true, key: 'k' })) {
   const onClose = vi.fn();
@@ -22,7 +22,7 @@ describe('AddPrDialog', () => {
     await userEvent.type(screen.getByLabelText(/pull request url/i), URL);
     await userEvent.click(screen.getByRole('button', { name: /^add$/i }));
 
-    expect(onAdd).toHaveBeenCalledWith({ owner: 'Graylog2', repo: 'graylog2-server', number: 4821 });
+    expect(onAdd).toHaveBeenCalledWith({ owner: 'Example', repo: 'example-server', number: 4821 });
     expect(onClose).toHaveBeenCalled();
   });
 
@@ -44,9 +44,9 @@ describe('AddPrDialog', () => {
 
   it('accepts the owner/repo#number shorthand', async () => {
     const { onAdd } = setup();
-    await userEvent.type(screen.getByLabelText(/pull request url/i), 'Graylog2/graylog2-server#4821');
+    await userEvent.type(screen.getByLabelText(/pull request url/i), 'Example/example-server#4821');
     await userEvent.click(screen.getByRole('button', { name: /^add$/i }));
-    expect(onAdd).toHaveBeenCalledWith({ owner: 'Graylog2', repo: 'graylog2-server', number: 4821 });
+    expect(onAdd).toHaveBeenCalledWith({ owner: 'Example', repo: 'example-server', number: 4821 });
   });
 
   it('tells the user when the PR is already on the board, and still closes', async () => {

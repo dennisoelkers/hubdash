@@ -13,11 +13,11 @@ import {
 } from './backports';
 
 function tracked(number: number): TrackedPr {
-  return { owner: 'Graylog2', repo: 'graylog2-server', number, addedAt: '2026-08-01T00:00:00Z' };
+  return { owner: 'Example', repo: 'example-server', number, addedAt: '2026-08-01T00:00:00Z' };
 }
 
 function keyOf(number: number): PrKey {
-  return prKey('Graylog2', 'graylog2-server', number);
+  return prKey('Example', 'example-server', number);
 }
 
 /** An entry map holding one ok entry per given (number, lifecycle) pair. */
@@ -46,7 +46,7 @@ function group(overrides: Partial<BackportGroup> = {}): BackportGroup {
 
 describe('groupKey', () => {
   it('is the main PR key, so a group needs no generated id', () => {
-    expect(groupKey(group())).toBe('graylog2/graylog2-server#4821');
+    expect(groupKey(group())).toBe('example/example-server#4821');
   });
 });
 

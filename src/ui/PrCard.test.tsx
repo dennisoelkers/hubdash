@@ -6,8 +6,8 @@ import type { PrEntry, TrackedPr } from '../types';
 import { PrCard } from './PrCard';
 
 const tracked: TrackedPr = {
-  owner: 'Graylog2',
-  repo: 'graylog2-server',
+  owner: 'Example',
+  repo: 'example-server',
   number: 4821,
   addedAt: '2026-08-27T09:00:00Z',
 };
@@ -19,7 +19,7 @@ function okEntry(overrides: Parameters<typeof makePr>[0] = {}): PrEntry {
 
 const errorEntry: PrEntry = {
   status: 'error',
-  key: 'graylog2/graylog2-server#4821',
+  key: 'example/example-server#4821',
   tracked,
   message: 'Could not resolve to a Repository with the name.',
 };
@@ -29,14 +29,14 @@ describe('PrCard — a resolved PR', () => {
     render(<PrCard entry={okEntry()} onRemove={() => {}} />);
     expect(screen.getByText('#4821')).toBeInTheDocument();
     expect(screen.getByText('Fix index rotation')).toBeInTheDocument();
-    expect(screen.getByText('Graylog2/graylog2-server')).toBeInTheDocument();
-    expect(screen.getByText(/dennisoelkers/)).toBeInTheDocument();
+    expect(screen.getByText('Example/example-server')).toBeInTheDocument();
+    expect(screen.getByText(/octocat/)).toBeInTheDocument();
   });
 
   it('links the title to the PR on GitHub, opening in a new tab', () => {
     render(<PrCard entry={okEntry()} onRemove={() => {}} />);
     const link = screen.getByRole('link', { name: /Fix index rotation/ });
-    expect(link).toHaveAttribute('href', 'https://github.com/Graylog2/graylog2-server/pull/4821');
+    expect(link).toHaveAttribute('href', 'https://github.com/Example/example-server/pull/4821');
     expect(link).toHaveAttribute('target', '_blank');
     expect(link).toHaveAttribute('rel', expect.stringContaining('noreferrer'));
   });
@@ -67,7 +67,7 @@ describe('PrCard — a resolved PR', () => {
     const onRemove = vi.fn();
     render(<PrCard entry={okEntry()} onRemove={onRemove} />);
     await userEvent.click(screen.getByRole('button', { name: /remove #4821/i }));
-    expect(onRemove).toHaveBeenCalledWith('graylog2/graylog2-server#4821');
+    expect(onRemove).toHaveBeenCalledWith('example/example-server#4821');
   });
 
   it('marks a flashed card so a duplicate add can draw the eye', () => {
@@ -128,7 +128,7 @@ describe('PrCard — an unresolved PR', () => {
   it('shows the identity it knows and the reason it failed', () => {
     render(<PrCard entry={errorEntry} onRemove={() => {}} />);
     expect(screen.getByText('#4821')).toBeInTheDocument();
-    expect(screen.getByText('Graylog2/graylog2-server')).toBeInTheDocument();
+    expect(screen.getByText('Example/example-server')).toBeInTheDocument();
     expect(screen.getByText(/Could not resolve to a Repository/)).toBeInTheDocument();
   });
 
@@ -136,7 +136,7 @@ describe('PrCard — an unresolved PR', () => {
     const onRemove = vi.fn();
     render(<PrCard entry={errorEntry} onRemove={onRemove} />);
     await userEvent.click(screen.getByRole('button', { name: /remove #4821/i }));
-    expect(onRemove).toHaveBeenCalledWith('graylog2/graylog2-server#4821');
+    expect(onRemove).toHaveBeenCalledWith('example/example-server#4821');
   });
 
   it('marks the card as errored', () => {

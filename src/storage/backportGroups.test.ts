@@ -22,9 +22,9 @@ function fakeStorage(initial: Record<string, string> = {}): Storage {
 }
 
 const group: BackportGroup = {
-  main: { owner: 'Graylog2', repo: 'graylog2-server', number: 4821, addedAt: '2026-08-01T00:00:00Z' },
+  main: { owner: 'Example', repo: 'example-server', number: 4821, addedAt: '2026-08-01T00:00:00Z' },
   slots: [
-    { version: '6.2', pr: { owner: 'Graylog2', repo: 'graylog2-server', number: 4840, addedAt: '2026-08-02T00:00:00Z' } },
+    { version: '6.2', pr: { owner: 'Example', repo: 'example-server', number: 4840, addedAt: '2026-08-02T00:00:00Z' } },
     { version: '6.1', pr: null },
   ],
   addedAt: '2026-08-20T00:00:00Z',

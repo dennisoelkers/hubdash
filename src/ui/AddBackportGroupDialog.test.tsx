@@ -3,7 +3,7 @@ import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 import { AddBackportGroupDialog } from './AddBackportGroupDialog';
 
-const URL = 'https://github.com/Graylog2/graylog2-server/pull/4821';
+const URL = 'https://github.com/Example/example-server/pull/4821';
 
 function setup(onAdd = vi.fn().mockReturnValue({ added: true, key: 'k' })) {
   const onClose = vi.fn();
@@ -24,7 +24,7 @@ describe('AddBackportGroupDialog', () => {
     await userEvent.click(screen.getByRole('button', { name: /track/i }));
 
     expect(onAdd).toHaveBeenCalledWith(
-      { owner: 'Graylog2', repo: 'graylog2-server', number: 4821 },
+      { owner: 'Example', repo: 'example-server', number: 4821 },
       ['6.2', '6.1'],
     );
     expect(onClose).toHaveBeenCalled();
@@ -35,7 +35,7 @@ describe('AddBackportGroupDialog', () => {
     await userEvent.type(screen.getByLabelText(/main pull request/i), URL);
     await userEvent.click(screen.getByRole('button', { name: /track/i }));
     expect(onAdd).toHaveBeenCalledWith(
-      { owner: 'Graylog2', repo: 'graylog2-server', number: 4821 },
+      { owner: 'Example', repo: 'example-server', number: 4821 },
       [],
     );
   });

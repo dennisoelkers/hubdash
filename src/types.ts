@@ -7,7 +7,7 @@ export type TrackedPr = {
   addedAt: string;
 };
 
-/** Canonical identity, e.g. "graylog2/graylog2-server#4821". Lowercased. */
+/** Canonical identity, e.g. "example/example-server#4821". Lowercased. */
 export type PrKey = string;
 
 /** Normalised CI outcome. `none` means the PR has no checks at all. */

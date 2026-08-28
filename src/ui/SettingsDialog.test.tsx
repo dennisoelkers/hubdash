@@ -10,7 +10,7 @@ function setup(overrides: Partial<Parameters<typeof SettingsDialog>[0]> = {}) {
     hasToken: false,
     onSave: vi.fn(),
     onClear: vi.fn(),
-    validate: vi.fn().mockResolvedValue({ ok: true, login: 'dennisoelkers' }),
+    validate: vi.fn().mockResolvedValue({ ok: true, login: 'octocat' }),
     ...overrides,
   };
   render(<SettingsDialog {...props} />);
@@ -35,7 +35,7 @@ describe('SettingsDialog', () => {
 
     await waitFor(() => expect(props.validate).toHaveBeenCalledWith('ghp_example'));
     expect(props.onSave).toHaveBeenCalledWith('ghp_example');
-    expect(await screen.findByText(/dennisoelkers/)).toBeInTheDocument();
+    expect(await screen.findByText(/octocat/)).toBeInTheDocument();
   });
 
   it('does not save a token GitHub rejects', async () => {
@@ -128,7 +128,7 @@ describe('SettingsDialog', () => {
     rerender(<SettingsDialog open={false} {...props} />);
 
     await act(async () => {
-      release?.({ ok: true, login: 'dennisoelkers' });
+      release?.({ ok: true, login: 'octocat' });
     });
 
     expect(onSave).not.toHaveBeenCalled();

@@ -3,7 +3,7 @@ import type { TrackedPr } from '../types';
 import { parseResponse } from './parseResponse';
 
 const prs: TrackedPr[] = [
-  { owner: 'Graylog2', repo: 'graylog2-server', number: 4821, addedAt: '2026-08-27T09:00:00Z' },
+  { owner: 'Example', repo: 'example-server', number: 4821, addedAt: '2026-08-27T09:00:00Z' },
 ];
 
 function rollup(state: string, nodes: unknown[] = []) {
@@ -17,13 +17,13 @@ function prNode(overrides: Record<string, unknown> = {}, rollupValue: unknown = 
   return {
     number: 4821,
     title: 'Fix index rotation',
-    url: 'https://github.com/Graylog2/graylog2-server/pull/4821',
+    url: 'https://github.com/Example/example-server/pull/4821',
     state: 'OPEN',
     isDraft: false,
     updatedAt: '2026-08-27T10:00:00Z',
-    author: { login: 'dennisoelkers' },
+    author: { login: 'octocat' },
     baseRefName: 'master',
-    repository: { nameWithOwner: 'Graylog2/graylog2-server' },
+    repository: { nameWithOwner: 'Example/example-server' },
     reviewDecision: 'REVIEW_REQUIRED',
     mergeable: 'MERGEABLE',
     reviewRequests: { totalCount: 0 },
@@ -57,13 +57,13 @@ describe('parseResponse — happy path', () => {
     const entry = entries[0];
     if (entry?.status !== 'ok') throw new Error('expected an ok entry');
     expect(entry.pr).toMatchObject({
-      key: 'graylog2/graylog2-server#4821',
-      owner: 'Graylog2',
-      repo: 'graylog2-server',
+      key: 'example/example-server#4821',
+      owner: 'Example',
+      repo: 'example-server',
       number: 4821,
       title: 'Fix index rotation',
-      author: 'dennisoelkers',
-      nameWithOwner: 'Graylog2/graylog2-server',
+      author: 'octocat',
+      nameWithOwner: 'Example/example-server',
       baseRefName: 'master',
       lifecycle: 'OPEN',
       isDraft: false,
@@ -173,7 +173,7 @@ describe('parseResponse — per-PR failures', () => {
   it('marks a PR errored when its alias came back null', () => {
     const entry = parseOk(response({ pr0: null })).entries[0];
     if (entry?.status !== 'error') throw new Error('expected an error entry');
-    expect(entry.key).toBe('graylog2/graylog2-server#4821');
+    expect(entry.key).toBe('example/example-server#4821');
     expect(entry.message).toBeTruthy();
   });
 
@@ -194,7 +194,7 @@ describe('parseResponse — per-PR failures', () => {
   it('lets healthy PRs through when a sibling fails', () => {
     const two: TrackedPr[] = [
       ...prs,
-      { owner: 'Graylog2', repo: 'gone', number: 1, addedAt: '2026-08-27T09:00:00Z' },
+      { owner: 'Example', repo: 'gone', number: 1, addedAt: '2026-08-27T09:00:00Z' },
     ];
     const raw = response({ pr1: null }, [{ message: 'Not found', path: ['pr1'] }]);
     const { entries } = parseOk(raw, two);
@@ -205,7 +205,7 @@ describe('parseResponse — per-PR failures', () => {
   it('returns one entry per tracked PR, in tracked order', () => {
     const two: TrackedPr[] = [
       ...prs,
-      { owner: 'Graylog2', repo: 'other', number: 7, addedAt: '2026-08-27T09:00:00Z' },
+      { owner: 'Example', repo: 'other', number: 7, addedAt: '2026-08-27T09:00:00Z' },
     ];
     const { entries } = parseOk(response(), two);
     expect(entries.map((entry) => entry.tracked.number)).toEqual([4821, 7]);

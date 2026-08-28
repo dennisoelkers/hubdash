@@ -2,8 +2,8 @@ import { prKey } from '../domain/prKey';
 import type { NormalisedPr } from '../types';
 
 export function makePr(overrides: Partial<NormalisedPr> = {}): NormalisedPr {
-  const owner = overrides.owner ?? 'Graylog2';
-  const repo = overrides.repo ?? 'graylog2-server';
+  const owner = overrides.owner ?? 'Example';
+  const repo = overrides.repo ?? 'example-server';
   const number = overrides.number ?? 4821;
   return {
     key: prKey(owner, repo, number),
@@ -12,7 +12,7 @@ export function makePr(overrides: Partial<NormalisedPr> = {}): NormalisedPr {
     number,
     title: 'Fix index rotation',
     url: `https://github.com/${owner}/${repo}/pull/${number}`,
-    author: 'dennisoelkers',
+    author: 'octocat',
     nameWithOwner: `${owner}/${repo}`,
     baseRefName: 'master',
     updatedAt: '2026-08-27T10:00:00Z',

@@ -3,14 +3,14 @@ import { prKey } from './prKey';
 
 describe('prKey', () => {
   it('joins owner, repo and number into a canonical string', () => {
-    expect(prKey('Graylog2', 'graylog2-server', 4821)).toBe(
-      'graylog2/graylog2-server#4821',
+    expect(prKey('Example', 'example-server', 4821)).toBe(
+      'example/example-server#4821',
     );
   });
 
   it('lowercases owner and repo so casing differences do not duplicate', () => {
-    expect(prKey('GRAYLOG2', 'Graylog2-Server', 1)).toBe(
-      prKey('graylog2', 'graylog2-server', 1),
+    expect(prKey('EXAMPLE', 'Example-Server', 1)).toBe(
+      prKey('example', 'example-server', 1),
     );
   });
 

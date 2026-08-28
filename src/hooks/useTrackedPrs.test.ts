@@ -33,7 +33,7 @@ describe('useTrackedPrs', () => {
   it('loads what was stored', () => {
     const stored = JSON.stringify({
       version: 1,
-      prs: [{ owner: 'Graylog2', repo: 'graylog2-server', number: 4821, addedAt: '2026-08-01T00:00:00Z' }],
+      prs: [{ owner: 'Example', repo: 'example-server', number: 4821, addedAt: '2026-08-01T00:00:00Z' }],
     });
     const { result } = setup(fakeStorage({ [TRACKED_PRS_KEY]: stored }));
     expect(result.current.prs).toHaveLength(1);
@@ -42,10 +42,10 @@ describe('useTrackedPrs', () => {
   it('adds a PR and stamps addedAt from the clock', () => {
     const { result } = setup();
     act(() => {
-      result.current.add({ owner: 'Graylog2', repo: 'graylog2-server', number: 4821 });
+      result.current.add({ owner: 'Example', repo: 'example-server', number: 4821 });
     });
     expect(result.current.prs).toEqual([
-      { owner: 'Graylog2', repo: 'graylog2-server', number: 4821, addedAt: '2026-08-27T12:00:00Z' },
+      { owner: 'Example', repo: 'example-server', number: 4821, addedAt: '2026-08-27T12:00:00Z' },
     ]);
   });
 
@@ -53,7 +53,7 @@ describe('useTrackedPrs', () => {
     const storage = fakeStorage();
     const { result } = renderHook(() => useTrackedPrs({ storage, clock }));
     act(() => {
-      result.current.add({ owner: 'Graylog2', repo: 'graylog2-server', number: 4821 });
+      result.current.add({ owner: 'Example', repo: 'example-server', number: 4821 });
     });
     expect(JSON.parse(storage.getItem(TRACKED_PRS_KEY) ?? '').prs).toHaveLength(1);
   });
@@ -62,19 +62,19 @@ describe('useTrackedPrs', () => {
     const { result } = setup();
     let outcome: { added: boolean; key: string } | undefined;
     act(() => {
-      outcome = result.current.add({ owner: 'Graylog2', repo: 'graylog2-server', number: 4821 });
+      outcome = result.current.add({ owner: 'Example', repo: 'example-server', number: 4821 });
     });
-    expect(outcome).toEqual({ added: true, key: 'graylog2/graylog2-server#4821' });
+    expect(outcome).toEqual({ added: true, key: 'example/example-server#4821' });
   });
 
   it('reports added:false and does not duplicate an already-tracked PR', () => {
     const { result } = setup();
     act(() => {
-      result.current.add({ owner: 'Graylog2', repo: 'graylog2-server', number: 4821 });
+      result.current.add({ owner: 'Example', repo: 'example-server', number: 4821 });
     });
     let outcome: { added: boolean; key: string } | undefined;
     act(() => {
-      outcome = result.current.add({ owner: 'Graylog2', repo: 'graylog2-server', number: 4821 });
+      outcome = result.current.add({ owner: 'Example', repo: 'example-server', number: 4821 });
     });
     expect(outcome?.added).toBe(false);
     expect(result.current.prs).toHaveLength(1);
@@ -83,11 +83,11 @@ describe('useTrackedPrs', () => {
   it('treats a casing difference as the same PR', () => {
     const { result } = setup();
     act(() => {
-      result.current.add({ owner: 'Graylog2', repo: 'graylog2-server', number: 4821 });
+      result.current.add({ owner: 'Example', repo: 'example-server', number: 4821 });
     });
     let outcome: { added: boolean } | undefined;
     act(() => {
-      outcome = result.current.add({ owner: 'GRAYLOG2', repo: 'Graylog2-Server', number: 4821 });
+      outcome = result.current.add({ owner: 'EXAMPLE', repo: 'Example-Server', number: 4821 });
     });
     expect(outcome?.added).toBe(false);
     expect(result.current.prs).toHaveLength(1);
@@ -96,8 +96,8 @@ describe('useTrackedPrs', () => {
   it('adds two PRs in sequence without losing the first', () => {
     const { result } = setup();
     act(() => {
-      result.current.add({ owner: 'Graylog2', repo: 'graylog2-server', number: 1 });
-      result.current.add({ owner: 'Graylog2', repo: 'graylog2-server', number: 2 });
+      result.current.add({ owner: 'Example', repo: 'example-server', number: 1 });
+      result.current.add({ owner: 'Example', repo: 'example-server', number: 2 });
     });
     expect(result.current.prs.map((pr) => pr.number)).toEqual([1, 2]);
   });
@@ -106,10 +106,10 @@ describe('useTrackedPrs', () => {
     const storage = fakeStorage();
     const { result } = renderHook(() => useTrackedPrs({ storage, clock }));
     act(() => {
-      result.current.add({ owner: 'Graylog2', repo: 'graylog2-server', number: 4821 });
+      result.current.add({ owner: 'Example', repo: 'example-server', number: 4821 });
     });
     act(() => {
-      result.current.remove('graylog2/graylog2-server#4821');
+      result.current.remove('example/example-server#4821');
     });
     expect(result.current.prs).toEqual([]);
     expect(JSON.parse(storage.getItem(TRACKED_PRS_KEY) ?? '').prs).toEqual([]);
@@ -118,7 +118,7 @@ describe('useTrackedPrs', () => {
   it('ignores a remove for an unknown key', () => {
     const { result } = setup();
     act(() => {
-      result.current.add({ owner: 'Graylog2', repo: 'graylog2-server', number: 4821 });
+      result.current.add({ owner: 'Example', repo: 'example-server', number: 4821 });
     });
     act(() => {
       result.current.remove('nope/nope#1');

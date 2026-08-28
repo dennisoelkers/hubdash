@@ -7,8 +7,8 @@ import type { ColumnId, PrEntry, TrackedPr } from '../types';
 import { Board } from './Board';
 
 const tracked: TrackedPr = {
-  owner: 'Graylog2',
-  repo: 'graylog2-server',
+  owner: 'Example',
+  repo: 'example-server',
   number: 1,
   addedAt: '2026-08-27T09:00:00Z',
 };
@@ -94,13 +94,13 @@ describe('Board', () => {
     const columns = groupIntoColumns([entry({ number: 4821 })]);
     render(<Board columns={columns} onRemove={onRemove} />);
     await userEvent.click(screen.getByRole('button', { name: /remove #4821/i }));
-    expect(onRemove).toHaveBeenCalledWith('graylog2/graylog2-server#4821');
+    expect(onRemove).toHaveBeenCalledWith('example/example-server#4821');
   });
 
   it('flashes only the card whose key matches', () => {
     const columns = groupIntoColumns([entry({ number: 1 }), entry({ number: 2 })]);
     render(
-      <Board columns={columns} onRemove={() => {}} flashedKey="graylog2/graylog2-server#2" />,
+      <Board columns={columns} onRemove={() => {}} flashedKey="example/example-server#2" />,
     );
     const flashed = screen.getAllByTestId('pr-card').filter(
       (card) => card.getAttribute('data-flashed') === 'true',

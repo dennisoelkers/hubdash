@@ -6,7 +6,7 @@ import type { BackportGroup, PrEntry, PrKey } from '../types';
 import { BackportGroupCard } from './BackportGroupCard';
 
 function tracked(number: number) {
-  return { owner: 'Graylog2', repo: 'graylog2-server', number, addedAt: '2026-08-01T00:00:00Z' };
+  return { owner: 'Example', repo: 'example-server', number, addedAt: '2026-08-01T00:00:00Z' };
 }
 
 function entryMap(...specs: Array<[number, 'OPEN' | 'CLOSED' | 'MERGED']>): Map<PrKey, PrEntry> {
@@ -51,39 +51,39 @@ describe('BackportGroupCard — display', () => {
     setup();
     expect(screen.getByText('#4821')).toBeInTheDocument();
     expect(screen.getByText('Fix 4821')).toBeInTheDocument();
-    expect(screen.getByText('Graylog2/graylog2-server')).toBeInTheDocument();
+    expect(screen.getByText('Example/example-server')).toBeInTheDocument();
   });
 
   it('links the main PR number to GitHub', () => {
     setup();
     expect(screen.getByRole('link', { name: '#4821' })).toHaveAttribute(
       'href',
-      'https://github.com/Graylog2/graylog2-server/pull/4821',
+      'https://github.com/Example/example-server/pull/4821',
     );
   });
 
   it('shows the author on the meta line once the main entry resolved', () => {
     setup();
-    expect(screen.getByText('dennisoelkers')).toBeInTheDocument();
+    expect(screen.getByText('octocat')).toBeInTheDocument();
     expect(screen.getByTestId('group-meta')).toHaveTextContent(
-      /^Graylog2\/graylog2-server · dennisoelkers · ✓ merged$/,
+      /^Example\/example-server · octocat · ✓ merged$/,
     );
   });
 
   it('omits the author, and its separator, while the main entry is pending', () => {
     setup({ entries: new Map<PrKey, PrEntry>() });
     expect(screen.getByTestId('group-meta')).toHaveTextContent(
-      /^Graylog2\/graylog2-server · … pending$/,
+      /^Example\/example-server · … pending$/,
     );
   });
 
   it('omits the author when the main entry errored', () => {
     const entries = new Map<PrKey, PrEntry>([
       [
-        'graylog2/graylog2-server#4821',
+        'example/example-server#4821',
         {
           status: 'error',
-          key: 'graylog2/graylog2-server#4821',
+          key: 'example/example-server#4821',
           tracked: tracked(4821),
           message: 'Could not resolve to a PullRequest.',
         },
@@ -91,7 +91,7 @@ describe('BackportGroupCard — display', () => {
     ]);
     setup({ entries });
     expect(screen.getByTestId('group-meta')).toHaveTextContent(
-      /^Graylog2\/graylog2-server · Could not resolve to a PullRequest\.$/,
+      /^Example\/example-server · Could not resolve to a PullRequest\.$/,
     );
   });
 
@@ -137,12 +137,12 @@ describe('BackportGroupCard — display', () => {
   });
 
   it('flashes when its own key is the flashed one', () => {
-    setup({ flashedKey: 'graylog2/graylog2-server#4821' });
+    setup({ flashedKey: 'example/example-server#4821' });
     expect(screen.getByTestId('backport-group-card')).toHaveAttribute('data-flashed', 'true');
   });
 
   it('does not flash for another group’s key', () => {
-    setup({ flashedKey: 'graylog2/graylog2-server#4790' });
+    setup({ flashedKey: 'example/example-server#4790' });
     expect(screen.getByTestId('backport-group-card')).toHaveAttribute('data-flashed', 'false');
   });
 

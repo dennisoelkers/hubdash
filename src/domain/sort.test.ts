@@ -4,8 +4,8 @@ import type { PrEntry, TrackedPr } from '../types';
 import { groupIntoColumns } from './sort';
 
 const tracked: TrackedPr = {
-  owner: 'Graylog2',
-  repo: 'graylog2-server',
+  owner: 'Example',
+  repo: 'example-server',
   number: 1,
   addedAt: '2026-08-01T00:00:00Z',
 };
@@ -18,7 +18,7 @@ function ok(overrides: Parameters<typeof makePr>[0]): PrEntry {
 function errored(number: number, message = 'Not found'): PrEntry {
   return {
     status: 'error',
-    key: `graylog2/graylog2-server#${number}`,
+    key: `example/example-server#${number}`,
     tracked: { ...tracked, number },
     message,
   };

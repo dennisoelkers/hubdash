@@ -18,8 +18,8 @@ function fakeStorage(initial: Record<string, string> = {}): Storage {
 }
 
 const clock = () => '2026-08-27T12:00:00Z';
-const MAIN = { owner: 'Graylog2', repo: 'graylog2-server', number: 4821 };
-const KEY = 'graylog2/graylog2-server#4821';
+const MAIN = { owner: 'Example', repo: 'example-server', number: 4821 };
+const KEY = 'example/example-server#4821';
 
 function setup(storage: Storage = fakeStorage()) {
   return renderHook(() => useBackportGroups({ storage, clock }));
@@ -90,7 +90,7 @@ describe('useBackportGroups — creating and removing groups', () => {
     let outcome: { added: boolean } | undefined;
     act(() => {
       outcome = result.current.addGroup(
-        { owner: 'GRAYLOG2', repo: 'Graylog2-Server', number: 4821 },
+        { owner: 'EXAMPLE', repo: 'Example-Server', number: 4821 },
         ['6.1'],
       );
     });
@@ -256,7 +256,7 @@ describe('useBackportGroups — filling slots', () => {
     let outcome: { ok: boolean } | undefined;
     act(() => {
       result.current.fillSlot(KEY, '6.2', { ...MAIN, number: 4840 });
-      outcome = result.current.fillSlot('graylog2/graylog2-server#4900', '6.2', {
+      outcome = result.current.fillSlot('example/example-server#4900', '6.2', {
         ...MAIN,
         number: 4840,
       });

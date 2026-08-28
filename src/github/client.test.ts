@@ -3,7 +3,7 @@ import type { TrackedPr } from '../types';
 import { GITHUB_GRAPHQL_URL, fetchBoard, validateToken } from './client';
 
 const prs: TrackedPr[] = [
-  { owner: 'Graylog2', repo: 'graylog2-server', number: 4821, addedAt: '2026-08-27T09:00:00Z' },
+  { owner: 'Example', repo: 'example-server', number: 4821, addedAt: '2026-08-27T09:00:00Z' },
 ];
 
 function jsonResponse(body: unknown, init: ResponseInit = {}): Response {
@@ -22,13 +22,13 @@ function okBody() {
         pullRequest: {
           number: 4821,
           title: 'Fix index rotation',
-          url: 'https://github.com/Graylog2/graylog2-server/pull/4821',
+          url: 'https://github.com/Example/example-server/pull/4821',
           state: 'OPEN',
           isDraft: false,
           updatedAt: '2026-08-27T10:00:00Z',
-          author: { login: 'dennisoelkers' },
+          author: { login: 'octocat' },
           baseRefName: 'master',
-          repository: { nameWithOwner: 'Graylog2/graylog2-server' },
+          repository: { nameWithOwner: 'Example/example-server' },
           reviewDecision: 'APPROVED',
           mergeable: 'MERGEABLE',
           reviewRequests: { totalCount: 0 },
@@ -57,8 +57,8 @@ describe('fetchBoard — request shape', () => {
   it('issues exactly one request no matter how many PRs are tracked', async () => {
     const fetchImpl = vi.fn().mockResolvedValue(jsonResponse(okBody()));
     const many: TrackedPr[] = Array.from({ length: 20 }, (_, index) => ({
-      owner: 'Graylog2',
-      repo: 'graylog2-server',
+      owner: 'Example',
+      repo: 'example-server',
       number: index + 1,
       addedAt: '2026-08-27T09:00:00Z',
     }));
@@ -236,9 +236,9 @@ describe('fetchBoard — transport failures', () => {
 
 describe('validateToken', () => {
   it('returns the login on success', async () => {
-    const fetchImpl = vi.fn().mockResolvedValue(jsonResponse({ data: { viewer: { login: 'dennisoelkers' } } }));
+    const fetchImpl = vi.fn().mockResolvedValue(jsonResponse({ data: { viewer: { login: 'octocat' } } }));
     const outcome = await validateToken('t', { fetchImpl });
-    expect(outcome).toEqual({ ok: true, login: 'dennisoelkers' });
+    expect(outcome).toEqual({ ok: true, login: 'octocat' });
   });
 
   it('reports a failure for a rejected token', async () => {

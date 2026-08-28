@@ -3,8 +3,8 @@ import type { TrackedPr } from '../types';
 import { aliasFor, buildQuery } from './buildQuery';
 
 const prs: TrackedPr[] = [
-  { owner: 'Graylog2', repo: 'graylog2-server', number: 4821, addedAt: '2026-08-27T09:00:00Z' },
-  { owner: 'Graylog2', repo: 'graylog-plugin-enterprise', number: 912, addedAt: '2026-08-27T09:00:00Z' },
+  { owner: 'Example', repo: 'example-server', number: 4821, addedAt: '2026-08-27T09:00:00Z' },
+  { owner: 'Example', repo: 'example-plugin-enterprise', number: 912, addedAt: '2026-08-27T09:00:00Z' },
 ];
 
 describe('aliasFor', () => {
@@ -21,9 +21,9 @@ describe('buildQuery', () => {
 
   it('emits one aliased repository field per tracked PR', () => {
     const query = buildQuery(prs);
-    expect(query).toContain('pr0: repository(owner: "Graylog2", name: "graylog2-server")');
+    expect(query).toContain('pr0: repository(owner: "Example", name: "example-server")');
     expect(query).toContain('pullRequest(number: 4821)');
-    expect(query).toContain('pr1: repository(owner: "Graylog2", name: "graylog-plugin-enterprise")');
+    expect(query).toContain('pr1: repository(owner: "Example", name: "example-plugin-enterprise")');
     expect(query).toContain('pullRequest(number: 912)');
   });
 
