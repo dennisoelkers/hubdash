@@ -5,7 +5,7 @@ export function aliasFor(index: number): string {
 }
 
 /** GraphQL string literals follow JSON's escaping rules. */
-function literal(value: string): string {
+export function literal(value: string): string {
   return JSON.stringify(value);
 }
 

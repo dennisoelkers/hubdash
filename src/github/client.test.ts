@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 import type { TrackedPr } from '../types';
-import { GITHUB_GRAPHQL_URL, fetchBoard, validateToken } from './client';
+import { GITHUB_GRAPHQL_URL, fetchBoard, fetchPrBody, validateToken } from './client';
 
 const prs: TrackedPr[] = [
   { owner: 'Example', repo: 'example-server', number: 4821, addedAt: '2026-08-27T09:00:00Z' },
@@ -289,5 +289,66 @@ describe('validateToken', () => {
     const fetchImpl = vi.fn().mockResolvedValue(jsonResponse({ data: { viewer: null } }));
     const outcome = await validateToken('t', { fetchImpl });
     expect(outcome.ok).toBe(false);
+  });
+});
+
+describe('fetchPrBody', () => {
+  it('POSTs a single-PR query for just the body field', async () => {
+    const fetchImpl = vi
+      .fn()
+      .mockResolvedValue(
+        jsonResponse({ data: { repository: { pullRequest: { body: 'hello' } } } }),
+      );
+    await fetchPrBody('t', { owner: 'Example', repo: 'example-server', number: 4821 }, {
+      fetchImpl,
+    });
+
+    expect(fetchImpl).toHaveBeenCalledTimes(1);
+    const [, init] = fetchImpl.mock.calls[0] ?? [];
+    const query = JSON.parse(String(init?.body)).query as string;
+    expect(query).toContain('repository(owner: "Example", name: "example-server")');
+    expect(query).toContain('pullRequest(number: 4821)');
+    expect(query).toContain('{ body }');
+  });
+
+  it('returns the body on success', async () => {
+    const fetchImpl = vi
+      .fn()
+      .mockResolvedValue(
+        jsonResponse({ data: { repository: { pullRequest: { body: 'the description' } } } }),
+      );
+    const outcome = await fetchPrBody('t', { owner: 'Example', repo: 'example-server', number: 4821 }, {
+      fetchImpl,
+    });
+    expect(outcome).toEqual({ ok: true, body: 'the description' });
+  });
+
+  it('returns a null body when the PR does not resolve', async () => {
+    const fetchImpl = vi
+      .fn()
+      .mockResolvedValue(jsonResponse({ data: { repository: { pullRequest: null } } } ));
+    const outcome = await fetchPrBody('t', { owner: 'Example', repo: 'example-server', number: 1 }, {
+      fetchImpl,
+    });
+    expect(outcome).toEqual({ ok: true, body: null });
+  });
+
+  it('returns a null body when the repository does not resolve', async () => {
+    const fetchImpl = vi.fn().mockResolvedValue(jsonResponse({ data: { repository: null } }));
+    const outcome = await fetchPrBody('t', { owner: 'nope', repo: 'nope', number: 1 }, {
+      fetchImpl,
+    });
+    expect(outcome).toEqual({ ok: true, body: null });
+  });
+
+  it('surfaces a transport failure the same way fetchBoard and validateToken do', async () => {
+    const fetchImpl = vi
+      .fn()
+      .mockResolvedValue(jsonResponse({ message: 'Bad credentials' }, { status: 401 }));
+    const outcome = await fetchPrBody('t', { owner: 'Example', repo: 'example-server', number: 1 }, {
+      fetchImpl,
+    });
+    if (outcome.ok) throw new Error('expected failure');
+    expect(outcome.error.kind).toBe('auth');
   });
 });

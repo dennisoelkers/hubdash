@@ -1,5 +1,5 @@
 import type { FetchOutcome, TrackedPr, TransportError } from '../types';
-import { buildQuery } from './buildQuery';
+import { buildQuery, literal } from './buildQuery';
 import { asRecord } from './json';
 import { parseResponse } from './parseResponse';
 
@@ -181,4 +181,28 @@ export async function validateToken(
     return { ok: false, error: 'GitHub accepted the request but returned no user.' };
   }
   return { ok: true, login };
+}
+
+export type FetchPrBodyResult = { ok: true; body: string | null } | { ok: false; error: TransportError };
+
+/**
+ * A standalone single-PR request, used by the backport-group create dialog to
+ * look for a version list in the main PR's own description before the group
+ * (and therefore a poll target for it) exists. Reuses `post()` — the same
+ * transport-error handling `fetchBoard` and `validateToken` already have.
+ */
+export async function fetchPrBody(
+  token: string,
+  pr: { owner: string; repo: string; number: number },
+  options: FetchBoardOptions = {},
+): Promise<FetchPrBodyResult> {
+  const query = `query { repository(owner: ${literal(pr.owner)}, name: ${literal(pr.repo)}) { pullRequest(number: ${pr.number}) { body } } }`;
+  const posted = await post(token, query, options);
+  if (!posted.ok) return { ok: false, error: posted.error };
+
+  const data = asRecord(asRecord(posted.body)?.data);
+  const repository = asRecord(data?.repository);
+  const pullRequest = asRecord(repository?.pullRequest);
+  const body = pullRequest?.body;
+  return { ok: true, body: typeof body === 'string' ? body : null };
 }
