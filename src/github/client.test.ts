@@ -299,9 +299,13 @@ describe('fetchPrBody', () => {
       .mockResolvedValue(
         jsonResponse({ data: { repository: { pullRequest: { body: 'hello' } } } }),
       );
-    await fetchPrBody('t', { owner: 'Example', repo: 'example-server', number: 4821 }, {
-      fetchImpl,
-    });
+    await fetchPrBody(
+      't',
+      { owner: 'Example', repo: 'example-server', number: 4821 },
+      {
+        fetchImpl,
+      },
+    );
 
     expect(fetchImpl).toHaveBeenCalledTimes(1);
     const [, init] = fetchImpl.mock.calls[0] ?? [];
@@ -317,27 +321,39 @@ describe('fetchPrBody', () => {
       .mockResolvedValue(
         jsonResponse({ data: { repository: { pullRequest: { body: 'the description' } } } }),
       );
-    const outcome = await fetchPrBody('t', { owner: 'Example', repo: 'example-server', number: 4821 }, {
-      fetchImpl,
-    });
+    const outcome = await fetchPrBody(
+      't',
+      { owner: 'Example', repo: 'example-server', number: 4821 },
+      {
+        fetchImpl,
+      },
+    );
     expect(outcome).toEqual({ ok: true, body: 'the description' });
   });
 
   it('returns a null body when the PR does not resolve', async () => {
     const fetchImpl = vi
       .fn()
-      .mockResolvedValue(jsonResponse({ data: { repository: { pullRequest: null } } } ));
-    const outcome = await fetchPrBody('t', { owner: 'Example', repo: 'example-server', number: 1 }, {
-      fetchImpl,
-    });
+      .mockResolvedValue(jsonResponse({ data: { repository: { pullRequest: null } } }));
+    const outcome = await fetchPrBody(
+      't',
+      { owner: 'Example', repo: 'example-server', number: 1 },
+      {
+        fetchImpl,
+      },
+    );
     expect(outcome).toEqual({ ok: true, body: null });
   });
 
   it('returns a null body when the repository does not resolve', async () => {
     const fetchImpl = vi.fn().mockResolvedValue(jsonResponse({ data: { repository: null } }));
-    const outcome = await fetchPrBody('t', { owner: 'nope', repo: 'nope', number: 1 }, {
-      fetchImpl,
-    });
+    const outcome = await fetchPrBody(
+      't',
+      { owner: 'nope', repo: 'nope', number: 1 },
+      {
+        fetchImpl,
+      },
+    );
     expect(outcome).toEqual({ ok: true, body: null });
   });
 
@@ -345,9 +361,13 @@ describe('fetchPrBody', () => {
     const fetchImpl = vi
       .fn()
       .mockResolvedValue(jsonResponse({ message: 'Bad credentials' }, { status: 401 }));
-    const outcome = await fetchPrBody('t', { owner: 'Example', repo: 'example-server', number: 1 }, {
-      fetchImpl,
-    });
+    const outcome = await fetchPrBody(
+      't',
+      { owner: 'Example', repo: 'example-server', number: 1 },
+      {
+        fetchImpl,
+      },
+    );
     if (outcome.ok) throw new Error('expected failure');
     expect(outcome.error.kind).toBe('auth');
   });

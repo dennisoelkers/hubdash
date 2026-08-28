@@ -917,9 +917,7 @@ describe('App — the Backports tab', () => {
     // (unlike a one-shot `findByLabelText(...).toHaveValue(...)`) is what
     // actually waits out that debounce rather than checking the value before
     // it has fired.
-    await waitFor(() =>
-      expect(screen.getByLabelText(/backport to/i)).toHaveValue('7.1, 6.3, 7.0'),
-    );
+    await waitFor(() => expect(screen.getByLabelText(/backport to/i)).toHaveValue('7.1, 6.3, 7.0'));
   });
 
   it('does not attempt detection when there is no token', async () => {

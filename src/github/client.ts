@@ -183,7 +183,9 @@ export async function validateToken(
   return { ok: true, login };
 }
 
-export type FetchPrBodyResult = { ok: true; body: string | null } | { ok: false; error: TransportError };
+export type FetchPrBodyResult =
+  | { ok: true; body: string | null }
+  | { ok: false; error: TransportError };
 
 /**
  * A standalone single-PR request, used by the backport-group create dialog to

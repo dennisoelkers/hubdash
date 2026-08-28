@@ -185,7 +185,10 @@ describe('AddBackportGroupDialog — version detection', () => {
     vi.useFakeTimers();
     let resolve!: (versions: string[]) => void;
     const detectVersions = vi.fn().mockImplementation(
-      () => new Promise<string[]>((r) => { resolve = r; }),
+      () =>
+        new Promise<string[]>((r) => {
+          resolve = r;
+        }),
     );
     render(
       <AddBackportGroupDialog
@@ -238,7 +241,10 @@ describe('AddBackportGroupDialog — version detection', () => {
     vi.useFakeTimers();
     let resolve!: (versions: string[]) => void;
     const detectVersions = vi.fn().mockImplementation(
-      () => new Promise<string[]>((r) => { resolve = r; }),
+      () =>
+        new Promise<string[]>((r) => {
+          resolve = r;
+        }),
     );
     render(
       <AddBackportGroupDialog
