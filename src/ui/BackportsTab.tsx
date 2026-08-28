@@ -46,7 +46,11 @@ export function BackportsTab({
     return <Empty>Add a GitHub token in settings to start tracking backports.</Empty>;
   }
   if (groups.length === 0) {
-    return <Empty>Track a pull request's backports — use the button above.</Empty>;
+    return (
+      <Empty>
+        Track a pull request's backports — use the button, paste a URL, or drop a link here.
+      </Empty>
+    );
   }
 
   const active = groups.filter((group) => !group.archived);
