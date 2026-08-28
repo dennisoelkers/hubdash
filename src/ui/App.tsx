@@ -1,10 +1,12 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useLocation } from 'wouter';
 import { groupPrs } from '../domain/backports';
+import { detectBackportVersions } from '../domain/detectBackportVersions';
 import { formatAgo } from '../domain/formatAgo';
 import { prKey } from '../domain/prKey';
 import { groupIntoColumns } from '../domain/sort';
-import { fetchBoard } from '../github/client';
+import { fetchBoard, fetchPrBody } from '../github/client';
+import type { ParsedPr } from '../github/parseUrl';
 import { parsePrUrl } from '../github/parseUrl';
 import { useBackportGroups } from '../hooks/useBackportGroups';
 import { useDragAndPaste } from '../hooks/useDragAndPaste';
@@ -296,6 +298,16 @@ export function App({ deps = {} }: { deps?: AppDeps } = {}) {
     [lastUpdatedAt, tick],
   );
 
+  const detectVersions = useCallback(
+    async (main: ParsedPr): Promise<string[]> => {
+      if (token === null) return [];
+      const result = await fetchPrBody(token, main, fetchImpl ? { fetchImpl } : {});
+      if (!result.ok || result.body === null) return [];
+      return detectBackportVersions(result.body);
+    },
+    [token, fetchImpl],
+  );
+
   return (
     <>
       <GlobalStyle />
@@ -383,6 +395,7 @@ export function App({ deps = {} }: { deps?: AppDeps } = {}) {
         }}
         onAdd={addGroupOrFlash}
         initialUrl={backportInitialUrl}
+        detectVersions={detectVersions}
       />
       <SettingsDialog
         open={settingsOpen}

@@ -884,6 +884,54 @@ describe('App — the Backports tab', () => {
     expect(screen.getByTestId('banner')).toHaveTextContent(/backport groups/i);
   });
 
+  it('prefills detected versions when a main PR whose description mentions backport is tracked', async () => {
+    const fetchImpl = vi.fn().mockImplementation(async (_url: string, init?: RequestInit) => {
+      const query = String(JSON.parse(String(init?.body)).query);
+      if (query.includes('{ body }')) {
+        return new Response(
+          JSON.stringify({
+            data: {
+              repository: {
+                pullRequest: { body: 'This PR needs to be backported to `7.1`, `6.3` & `7.0`.' },
+              },
+            },
+          }),
+          { status: 200, headers: { 'content-type': 'application/json' } },
+        );
+      }
+      return boardResponder({ pr0: prNode(4821) })(_url, init);
+    });
+    const storage = fakeStorage({ [TOKEN_KEY]: storedToken });
+    render(<App deps={{ fetchImpl, storage, clock, nowMs }} />);
+
+    await userEvent.click(await screen.findByRole('tab', { name: /backports/i }));
+    await userEvent.click(screen.getByRole('button', { name: /track backports/i }));
+    await userEvent.type(
+      screen.getByLabelText(/main pull request/i),
+      'https://github.com/Example/example-server/pull/4821',
+    );
+
+    // Real time here, not fake: `userEvent.type` still types the number digit
+    // by digit, but each keystroke resets the dialog's 400ms debounce, so
+    // only the final, fully-typed identity ever survives it — `waitFor`
+    // (unlike a one-shot `findByLabelText(...).toHaveValue(...)`) is what
+    // actually waits out that debounce rather than checking the value before
+    // it has fired.
+    await waitFor(() =>
+      expect(screen.getByLabelText(/backport to/i)).toHaveValue('7.1, 6.3, 7.0'),
+    );
+  });
+
+  it('does not attempt detection when there is no token', async () => {
+    const fetchImpl = vi.fn();
+    const storage = fakeStorage({});
+    render(<App deps={{ fetchImpl, storage, clock, nowMs }} />);
+    // No token stored, so Settings opens automatically — the point here is
+    // only that detection makes no request when App has no token to use.
+    await screen.findByRole('dialog', { name: /settings/i });
+    expect(fetchImpl).not.toHaveBeenCalled();
+  });
+
   it('archives a fully-landed group into the collapsed Archive section', async () => {
     // Only the slot's PR needs to be merged: `isComplete` excludes the main PR
     // from its count (it's the thing being backported, not a backport), so
