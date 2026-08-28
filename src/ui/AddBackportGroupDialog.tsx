@@ -1,15 +1,28 @@
-import { useEffect, useId, useState } from 'react';
+import { useEffect, useId, useRef, useState } from 'react';
 import styled from 'styled-components';
 import { parseVersions } from '../domain/parseVersions';
 import type { ParsedPr } from '../github/parseUrl';
 import { parsePrUrl } from '../github/parseUrl';
 import { tokens } from './theme';
 
+/**
+ * A URL typed character by character passes through several briefly-valid
+ * PR numbers on the way to the real one (".../pull/4", then "/48", then
+ * "/482", then "/4821" are each a distinct, fully-parseable PR identity) —
+ * without a debounce, each one would fire its own detection request (verified
+ * empirically while grounding this plan: an un-debounced version fired 4
+ * requests for one 4-digit PR number). Paste and drop are unaffected: both
+ * set the whole field in one change event, so they only ever see the final
+ * identity and this delay is invisible to them.
+ */
+const DETECTION_DEBOUNCE_MS = 400;
+
 export type AddBackportGroupDialogProps = {
   open: boolean;
   onClose: () => void;
   onAdd: (main: ParsedPr, versions: string[]) => { added: boolean; key: string };
   initialUrl?: string;
+  detectVersions?: (main: ParsedPr) => Promise<string[]>;
 };
 
 const Backdrop = styled.div`
@@ -88,10 +101,17 @@ export function AddBackportGroupDialog({
   onClose,
   onAdd,
   initialUrl,
+  detectVersions,
 }: AddBackportGroupDialogProps) {
   const [url, setUrl] = useState('');
   const [versions, setVersions] = useState('');
   const [error, setError] = useState<string | null>(null);
+  const [detecting, setDetecting] = useState(false);
+  // A one-way flag: once the user has typed into the versions field
+  // themselves, detection never overwrites it again for this dialog session.
+  // A ref rather than state because flipping it must never itself trigger a
+  // re-run of the detection effect below.
+  const versionsTouchedRef = useRef(false);
   const urlId = useId();
   const versionsId = useId();
 
@@ -102,6 +122,8 @@ export function AddBackportGroupDialog({
       setUrl('');
       setVersions('');
       setError(null);
+      setDetecting(false);
+      versionsTouchedRef.current = false;
     }
   }, [open, initialUrl]);
 
@@ -113,6 +135,46 @@ export function AddBackportGroupDialog({
     document.addEventListener('keydown', onKeyDown);
     return () => document.removeEventListener('keydown', onKeyDown);
   }, [open, onClose]);
+
+  const parsedMain = parsePrUrl(url);
+  const mainKey = parsedMain.ok
+    ? `${parsedMain.value.owner}/${parsedMain.value.repo}#${parsedMain.value.number}`
+    : null;
+
+  // Fires once per distinct main-PR identity, not once per keystroke — keyed
+  // on `mainKey` rather than `url`, so re-typing the same URL (or editing it
+  // in a way that still resolves to the same PR) does not re-fetch. Debounced
+  // so a rapid run of identities (typing the PR number digit by digit) only
+  // ever requests the one the field settles on. Silent on every failure
+  // path: this is a convenience prefill layered on an already-complete
+  // manual flow, not a new validation gate.
+  useEffect(() => {
+    if (!open || !detectVersions || mainKey === null || versionsTouchedRef.current) return;
+
+    const parsed = parsePrUrl(url);
+    if (!parsed.ok) return;
+
+    let cancelled = false;
+    const timer = setTimeout(() => {
+      setDetecting(true);
+      detectVersions(parsed.value)
+        .then((detected) => {
+          if (cancelled || versionsTouchedRef.current || detected.length === 0) return;
+          setVersions(detected.join(', '));
+        })
+        .catch(() => {
+          // Silent by design (spec §5) — the field just stays as manual entry.
+        })
+        .finally(() => {
+          if (!cancelled) setDetecting(false);
+        });
+    }, DETECTION_DEBOUNCE_MS);
+
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+    };
+  }, [open, mainKey, detectVersions]);
 
   if (!open) return null;
 
@@ -153,8 +215,11 @@ export function AddBackportGroupDialog({
           id={versionsId}
           autoFocus={initialUrl !== undefined}
           value={versions}
-          onChange={(event) => setVersions(event.target.value)}
-          placeholder="6.2, 6.1, 6.0"
+          onChange={(event) => {
+            versionsTouchedRef.current = true;
+            setVersions(event.target.value);
+          }}
+          placeholder={detecting ? 'Detecting…' : '6.2, 6.1, 6.0'}
         />
         <Hint>Comma separated. You can add or remove versions later.</Hint>
         {error === null ? null : <Error role="alert">{error}</Error>}
