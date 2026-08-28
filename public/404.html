@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>hubdash</title>
+    <script>
+      // GitHub Pages serves static files only — there's no server-side rewrite
+      // to send a deep link like /hubdash/backports to index.html, so GitHub
+      // Pages serves this 404 page for it instead. This script encodes the
+      // path GitHub Pages couldn't find into a query string and redirects to
+      // the app's real entry point; the matching script in index.html decodes
+      // it back into a path before the app's own router ever sees it.
+      //
+      // `segmentsToKeep` is the number of path segments that belong to the
+      // deployment, not the app's own routes — 1 for a GitHub Pages project
+      // site (`/<repo>/...`), 0 for a user/org root site or a custom domain.
+      var segmentsToKeep = 1;
+      var l = window.location;
+      var parts = l.pathname.split('/');
+      var basePath = parts.slice(0, 1 + segmentsToKeep).join('/');
+      var rest = parts.slice(1 + segmentsToKeep).join('/');
+      var search = l.search ? l.search.slice(1).replace(/&/g, '~and~') : '';
+      var query = ['/' + rest.replace(/&/g, '~and~'), search].filter(Boolean).join('&');
+      l.replace(l.origin + basePath + '/?' + query + l.hash);
+    </script>
+  </head>
+  <body></body>
+</html>

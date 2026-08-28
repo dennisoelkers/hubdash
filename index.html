@@ -7,6 +7,30 @@
   </head>
   <body>
     <div id="root"></div>
+    <script>
+      // Undoes the redirect 404.html makes for a deep link GitHub Pages
+      // couldn't find as a real file (e.g. /hubdash/backports) — restores the
+      // real path via history.replaceState before the app (and its router)
+      // ever sees it. A no-op for a normal load, where the query string
+      // doesn't start with the "/" this script looks for.
+      (function () {
+        var l = window.location;
+        if (l.search[1] !== '/') return;
+        var decoded = l.search
+          .slice(1)
+          .split('&')
+          .map(function (segment) {
+            return segment.replace(/~and~/g, '&');
+          });
+        var path = decoded[0];
+        var restQuery = decoded.slice(1).join('&');
+        window.history.replaceState(
+          null,
+          '',
+          l.pathname.slice(0, -1) + path + (restQuery ? '?' + restQuery : '') + l.hash,
+        );
+      })();
+    </script>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>

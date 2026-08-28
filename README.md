@@ -51,7 +51,11 @@ Open the URL Vite prints (`http://localhost:5173` by default). On first launch h
 
 ## Deploying
 
-`npm run build` produces a static site in `dist/` that can be hosted anywhere that serves static files (GitHub Pages, Netlify, S3, etc.). Since `/pulls` and `/backports` are client-side routes, the host needs to serve `index.html` for unknown paths (an SPA fallback / rewrite rule) — otherwise a direct load or refresh on `/backports` will 404.
+Every push to `main` builds the app and publishes it to GitHub Pages automatically (`.github/workflows/deploy.yml`) — no manual steps beyond enabling Pages once, under **Settings → Pages → Source → GitHub Actions**.
+
+`npm run build` also works standalone and produces a static site in `dist/` that can be hosted anywhere that serves static files. Since `/pulls` and `/backports` are client-side routes, the host needs to serve `index.html` for unknown paths (an SPA fallback / rewrite rule) — GitHub Pages has no such rewrite capability, so this repo ships a small `public/404.html` that redirects a deep link back through `index.html` client-side instead (see the comments in `404.html` and `index.html` for how). A host with real rewrite support (Netlify, Vercel, S3 + CloudFront, etc.) doesn't need that trick — a plain fallback rule is enough.
+
+If you deploy somewhere other than a GitHub Pages *project* site (i.e. not at `<user>.github.io/<repo>/`), pass the right `--base` to `vite build` for wherever the app is actually served from — `--base=/` for the domain root, which is also `main.tsx`'s default with no flag at all.
 
 ## Tech stack
 
