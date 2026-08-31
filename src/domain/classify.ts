@@ -5,8 +5,10 @@ import type { ColumnId, NormalisedPr } from '../types';
  * the first match wins, so the most blocking reason decides the column.
  *
  * The columns answer one question — whose move is it:
- *   needsAction  mine: broken, changes requested, or an unfinished draft
- *   waiting      someone else's: no review yet, or CI still running
+ *   needsAction  mine: broken, changes requested (and not yet re-requested),
+ *                or an unfinished draft
+ *   waiting      someone else's: no review yet, CI still running, or changes
+ *                requested but a review has been re-requested
  *   ready        approved and green; nothing stands in the way
  */
 export function classify(pr: NormalisedPr): ColumnId {
@@ -18,7 +20,12 @@ export function classify(pr: NormalisedPr): ColumnId {
   // mergeability yet and must not be read as a conflict.
   if (pr.mergeable === 'CONFLICTING') return 'needsAction';
 
-  if (pr.reviewDecision === 'CHANGES_REQUESTED') return 'needsAction';
+  // GitHub's reviewDecision does not clear itself on a push or a re-request —
+  // only a new review submission changes it. A pending review request is the
+  // signal that the ball has moved back to the reviewer.
+  if (pr.reviewDecision === 'CHANGES_REQUESTED' && pr.requestedReviewerCount === 0) {
+    return 'needsAction';
+  }
 
   // Nobody else can act on a draft, so it is always the author's move.
   if (pr.isDraft) return 'needsAction';

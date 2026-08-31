@@ -54,6 +54,32 @@ describe('classify — review decision (rule 4)', () => {
   it('leaves review required in waiting', () => {
     expect(classify(makePr({ reviewDecision: 'REVIEW_REQUIRED' }))).toBe('waiting');
   });
+
+  it('moves changes requested back to waiting once a review has been re-requested', () => {
+    expect(
+      classify(makePr({ reviewDecision: 'CHANGES_REQUESTED', requestedReviewerCount: 1 })),
+    ).toBe('waiting');
+  });
+
+  it('still sends a failing-CI PR to needs action even with a re-requested review', () => {
+    expect(
+      classify(
+        makePr({ reviewDecision: 'CHANGES_REQUESTED', requestedReviewerCount: 1, ci: 'failure' }),
+      ),
+    ).toBe('needsAction');
+  });
+
+  it('still sends a re-requested draft to needs action', () => {
+    expect(
+      classify(
+        makePr({
+          reviewDecision: 'CHANGES_REQUESTED',
+          requestedReviewerCount: 1,
+          isDraft: true,
+        }),
+      ),
+    ).toBe('needsAction');
+  });
 });
 
 describe('classify — drafts (rule 5)', () => {
