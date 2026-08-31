@@ -6,7 +6,7 @@ import { TabBar } from './TabBar';
 describe('TabBar', () => {
   it('shows both tabs with their counts', () => {
     render(<TabBar active="board" onChange={() => {}} boardCount={3} backportsCount={2} />);
-    expect(screen.getByRole('tab', { name: /board/i })).toHaveTextContent('3');
+    expect(screen.getByRole('tab', { name: /pull requests/i })).toHaveTextContent('3');
     expect(screen.getByRole('tab', { name: /backports/i })).toHaveTextContent('2');
   });
 
@@ -16,7 +16,10 @@ describe('TabBar', () => {
       'aria-selected',
       'true',
     );
-    expect(screen.getByRole('tab', { name: /board/i })).toHaveAttribute('aria-selected', 'false');
+    expect(screen.getByRole('tab', { name: /pull requests/i })).toHaveAttribute(
+      'aria-selected',
+      'false',
+    );
   });
 
   it('calls onChange with the clicked tab', async () => {

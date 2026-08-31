@@ -37,7 +37,7 @@ export function TabBar({ active, onChange, boardCount, backportsCount }: TabBarP
   return (
     <Bar role="tablist">
       <Tab role="tab" aria-selected={active === 'board'} onClick={() => onChange('board')}>
-        {`Board  ${boardCount}`}
+        {`Pull Requests  ${boardCount}`}
       </Tab>
       <Tab role="tab" aria-selected={active === 'backports'} onClick={() => onChange('backports')}>
         {`Backports  ${backportsCount}`}

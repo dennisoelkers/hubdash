@@ -8,7 +8,7 @@ There's no server. hubdash is a static single-page app that talks directly to th
 
 ## What it does
 
-**Board tab** — paste or drop a PR link and hubdash tracks it, sorting cards into three columns based on live status from GitHub:
+**Pull Requests tab** — paste or drop a PR link and hubdash tracks it, sorting cards into three columns based on live status from GitHub:
 
 - **Waiting** — open, nothing needed from you right now
 - **Needs action** — failing CI, changes requested, or merge conflicts

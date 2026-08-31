@@ -596,10 +596,10 @@ describe('App — freshness and the rate-limit backoff', () => {
 });
 
 describe('App — the Backports tab', () => {
-  it('starts on the Board tab', async () => {
+  it('starts on the Pull Requests tab', async () => {
     const storage = fakeStorage({ [TOKEN_KEY]: storedToken });
     render(<App deps={{ fetchImpl: vi.fn(), storage, clock, nowMs }} />);
-    expect(await screen.findByRole('tab', { name: /board/i })).toHaveAttribute(
+    expect(await screen.findByRole('tab', { name: /pull requests/i })).toHaveAttribute(
       'aria-selected',
       'true',
     );
@@ -667,7 +667,7 @@ describe('App — the Backports tab', () => {
 
     // And the board still shows it once — a duplicated poll target would render
     // the same PR as two cards with duplicate React keys.
-    await userEvent.click(screen.getByRole('tab', { name: /board/i }));
+    await userEvent.click(screen.getByRole('tab', { name: /pull requests/i }));
     expect(screen.getAllByText('#4821')).toHaveLength(1);
     expect(screen.getAllByText('Change number 4821')).toHaveLength(1);
   });
@@ -772,7 +772,7 @@ describe('App — the Backports tab', () => {
     expect(screen.getByLabelText(/main pull request/i)).toHaveValue(
       'https://github.com/Example/example-server/pull/4821',
     );
-    expect(screen.getByRole('tab', { name: /board/i })).toHaveTextContent('0');
+    expect(screen.getByRole('tab', { name: /pull requests/i })).toHaveTextContent('0');
     expect(storage.getItem(TRACKED_PRS_KEY)).toBeNull();
     expect(fetchImpl).not.toHaveBeenCalled();
   });
@@ -979,11 +979,11 @@ describe('App — the Backports tab', () => {
 });
 
 describe('App — routing', () => {
-  it('renders the Board tab for /pulls', async () => {
+  it('renders the Pull Requests tab for /pulls', async () => {
     window.history.pushState(null, '', '/pulls');
     const storage = fakeStorage({ [TOKEN_KEY]: storedToken });
     render(<App deps={{ fetchImpl: vi.fn(), storage, clock, nowMs }} />);
-    expect(await screen.findByRole('tab', { name: /board/i })).toHaveAttribute(
+    expect(await screen.findByRole('tab', { name: /pull requests/i })).toHaveAttribute(
       'aria-selected',
       'true',
     );
@@ -1004,7 +1004,7 @@ describe('App — routing', () => {
     const storage = fakeStorage({ [TOKEN_KEY]: storedToken });
     render(<App deps={{ fetchImpl: vi.fn(), storage, clock, nowMs }} />);
     await waitFor(() => expect(window.location.pathname).toBe('/pulls'));
-    expect(screen.getByRole('tab', { name: /board/i })).toHaveAttribute('aria-selected', 'true');
+    expect(screen.getByRole('tab', { name: /pull requests/i })).toHaveAttribute('aria-selected', 'true');
   });
 
   it('redirects an unknown path to /pulls', async () => {
@@ -1012,7 +1012,7 @@ describe('App — routing', () => {
     const storage = fakeStorage({ [TOKEN_KEY]: storedToken });
     render(<App deps={{ fetchImpl: vi.fn(), storage, clock, nowMs }} />);
     await waitFor(() => expect(window.location.pathname).toBe('/pulls'));
-    expect(screen.getByRole('tab', { name: /board/i })).toHaveAttribute('aria-selected', 'true');
+    expect(screen.getByRole('tab', { name: /pull requests/i })).toHaveAttribute('aria-selected', 'true');
   });
 
   it('updates the URL when a tab is clicked', async () => {
@@ -1020,7 +1020,7 @@ describe('App — routing', () => {
     render(<App deps={{ fetchImpl: vi.fn(), storage, clock, nowMs }} />);
     await userEvent.click(await screen.findByRole('tab', { name: /backports/i }));
     expect(window.location.pathname).toBe('/backports');
-    await userEvent.click(screen.getByRole('tab', { name: /board/i }));
+    await userEvent.click(screen.getByRole('tab', { name: /pull requests/i }));
     expect(window.location.pathname).toBe('/pulls');
   });
 
@@ -1038,12 +1038,12 @@ describe('App — routing', () => {
 
     // Not `findByRole` + a single `toHaveAttribute`: jsdom dispatches `popstate`
     // for `history.back()` via its own `setTimeout(fn, 0)` (see jsdom's
-    // SessionHistory#traverseHistory), a real macrotask. The Board tab element
+    // SessionHistory#traverseHistory), a real macrotask. The Pull Requests tab element
     // already exists in the DOM (just with the wrong `aria-selected`), so a
     // one-shot `findByRole` resolves before that timer ever fires. `waitFor`
     // polls on a real interval, which reliably outlasts it.
     await waitFor(() =>
-      expect(screen.getByRole('tab', { name: /board/i })).toHaveAttribute('aria-selected', 'true'),
+      expect(screen.getByRole('tab', { name: /pull requests/i })).toHaveAttribute('aria-selected', 'true'),
     );
   });
 });
