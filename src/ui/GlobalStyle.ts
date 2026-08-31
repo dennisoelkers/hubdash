@@ -8,6 +8,8 @@ export const GlobalStyle = createGlobalStyle`
 
   body {
     margin: 0;
+    /* Room for the fixed version footer, so it never covers the last card. */
+    padding-bottom: ${tokens.space(8)};
     background: ${tokens.color.background};
     color: ${tokens.color.text};
     font-family: ${tokens.font.body};
