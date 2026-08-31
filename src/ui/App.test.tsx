@@ -1004,7 +1004,10 @@ describe('App — routing', () => {
     const storage = fakeStorage({ [TOKEN_KEY]: storedToken });
     render(<App deps={{ fetchImpl: vi.fn(), storage, clock, nowMs }} />);
     await waitFor(() => expect(window.location.pathname).toBe('/pulls'));
-    expect(screen.getByRole('tab', { name: /pull requests/i })).toHaveAttribute('aria-selected', 'true');
+    expect(screen.getByRole('tab', { name: /pull requests/i })).toHaveAttribute(
+      'aria-selected',
+      'true',
+    );
   });
 
   it('redirects an unknown path to /pulls', async () => {
@@ -1012,7 +1015,10 @@ describe('App — routing', () => {
     const storage = fakeStorage({ [TOKEN_KEY]: storedToken });
     render(<App deps={{ fetchImpl: vi.fn(), storage, clock, nowMs }} />);
     await waitFor(() => expect(window.location.pathname).toBe('/pulls'));
-    expect(screen.getByRole('tab', { name: /pull requests/i })).toHaveAttribute('aria-selected', 'true');
+    expect(screen.getByRole('tab', { name: /pull requests/i })).toHaveAttribute(
+      'aria-selected',
+      'true',
+    );
   });
 
   it('updates the URL when a tab is clicked', async () => {
@@ -1043,7 +1049,10 @@ describe('App — routing', () => {
     // one-shot `findByRole` resolves before that timer ever fires. `waitFor`
     // polls on a real interval, which reliably outlasts it.
     await waitFor(() =>
-      expect(screen.getByRole('tab', { name: /pull requests/i })).toHaveAttribute('aria-selected', 'true'),
+      expect(screen.getByRole('tab', { name: /pull requests/i })).toHaveAttribute(
+        'aria-selected',
+        'true',
+      ),
     );
   });
 });
