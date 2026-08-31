@@ -21,6 +21,7 @@ import { Banner } from './Banner';
 import { BoardTab } from './BoardTab';
 import { DropOverlay } from './DropOverlay';
 import { Empty } from './Empty';
+import { Footer } from './Footer';
 import { GlobalStyle } from './GlobalStyle';
 import type { TokenValidator } from './SettingsDialog';
 import { SettingsDialog } from './SettingsDialog';
@@ -414,6 +415,7 @@ export function App({ deps = {} }: { deps?: AppDeps } = {}) {
         }}
       />
       <DropOverlay visible={isDragging && activeTab === 'board'} />
+      <Footer />
     </>
   );
 }
