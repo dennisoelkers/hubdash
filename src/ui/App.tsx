@@ -358,8 +358,8 @@ export function App({ deps = {} }: { deps?: AppDeps } = {}) {
           <TabBar
             active={activeTab}
             onChange={(tab) => navigate(tab === 'board' ? '/pulls' : '/backports')}
-            boardCount={prs.length}
-            backportsCount={groups.length}
+            boardCount={prs.length - columns.archive.length}
+            backportsCount={groups.filter((group) => !group.archived).length}
           />
           {activeTab === 'board' ? (
             <BoardTab

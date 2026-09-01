@@ -192,6 +192,23 @@ describe('App — the board', () => {
     expect(fetchImpl).toHaveBeenCalledTimes(1);
   });
 
+  it('counts only active pull requests on the tab, excluding merged and closed ones', async () => {
+    const fetchImpl = boardResponder({
+      pr0: prNode(4821),
+      pr1: prNode(4790, { state: 'MERGED' }),
+      pr2: prNode(4800, { state: 'CLOSED' }),
+    });
+    const storage = fakeStorage({
+      [TOKEN_KEY]: storedToken,
+      [TRACKED_PRS_KEY]: storedPrs(4821, 4790, 4800),
+    });
+    render(<App deps={{ fetchImpl, storage, clock, nowMs }} />);
+
+    await waitFor(() =>
+      expect(screen.getByRole('tab', { name: /pull requests/i })).toHaveTextContent('1'),
+    );
+  });
+
   it('shows the rate limit and a freshness label after a successful poll', async () => {
     const fetchImpl = boardResponder({ pr0: prNode(4821) });
     const storage = fakeStorage({ [TOKEN_KEY]: storedToken, [TRACKED_PRS_KEY]: storedPrs(4821) });
@@ -968,6 +985,7 @@ describe('App — the Backports tab', () => {
     await userEvent.click(await screen.findByRole('button', { name: /^archive$/i }));
 
     expect(screen.queryByTestId('backport-group-card')).not.toBeInTheDocument();
+    expect(screen.getByRole('tab', { name: /backports/i })).toHaveTextContent('0');
     const toggle = screen.getByRole('button', { name: /archive/i });
     expect(toggle).toHaveAttribute('aria-expanded', 'false');
     await userEvent.click(toggle);
