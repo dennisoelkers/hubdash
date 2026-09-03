@@ -1,13 +1,14 @@
 import styled from 'styled-components';
 import { tokens } from './theme';
 
-export type TabId = 'board' | 'backports';
+export type TabId = 'board' | 'backports' | 'tasks';
 
 export type TabBarProps = {
   active: TabId;
   onChange: (tab: TabId) => void;
   boardCount: number;
   backportsCount: number;
+  tasksCount: number;
 };
 
 const Bar = styled.div`
@@ -33,7 +34,7 @@ const Tab = styled.button`
   }
 `;
 
-export function TabBar({ active, onChange, boardCount, backportsCount }: TabBarProps) {
+export function TabBar({ active, onChange, boardCount, backportsCount, tasksCount }: TabBarProps) {
   return (
     <Bar role="tablist">
       <Tab role="tab" aria-selected={active === 'board'} onClick={() => onChange('board')}>
@@ -41,6 +42,9 @@ export function TabBar({ active, onChange, boardCount, backportsCount }: TabBarP
       </Tab>
       <Tab role="tab" aria-selected={active === 'backports'} onClick={() => onChange('backports')}>
         {`Backports  ${backportsCount}`}
+      </Tab>
+      <Tab role="tab" aria-selected={active === 'tasks'} onClick={() => onChange('tasks')}>
+        {`Tasks  ${tasksCount}`}
       </Tab>
     </Bar>
   );
