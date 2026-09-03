@@ -22,7 +22,9 @@ Merged or closed PRs drop into a collapsed Archive section instead of cluttering
 
 <img width="3817" height="1856" alt="image" src="https://github.com/user-attachments/assets/05f0ed4e-4b77-4173-8027-6c6f20d7332b" />
 
-Both tabs poll GitHub every 15 seconds, share one request per unique PR (so a PR tracked on both tabs only costs one query), and are reachable at their own URLs (`/pulls`, `/backports`) — bookmarkable, shareable, and wired up to the browser's back/forward buttons.
+**Tasks tab** — track GitHub issues and pull requests as a single manually ordered list: drag a row to reorder it, and each one shows live status (waiting, needs action, ready, merged, or closed). Full GitHub URLs only — issues and PRs share one number sequence per repo, so `owner/repo#N` can't say which type it names.
+
+All three tabs poll GitHub every 15 seconds, share one request per unique item (so something tracked on more than one tab only costs one query), and are reachable at their own URLs (`/pulls`, `/backports`, `/tasks`) — bookmarkable, shareable, and wired up to the browser's back/forward buttons.
 
 ## Requirements
 
