@@ -84,6 +84,7 @@ export type RateLimit = {
 
 export type PollResult = {
   entries: PrEntry[];
+  issueEntries: IssueEntry[];
   rateLimit: RateLimit | null;
 };
 
@@ -118,6 +119,42 @@ export type BackportGroup = {
   /** Set only by the user's own Archive action; never implied by isComplete. */
   archived: boolean;
 };
+
+export type TaskKind = 'pr' | 'issue';
+
+/**
+ * A GitHub issue or PR tracked as a task. Also reused, unmodified, as the
+ * generalized shape buildQuery/parseResponse/fetchBoard accept in place of
+ * TrackedPr, so Board and Backports' existing TrackedPrs can join the same
+ * poll by tagging themselves with kind: 'pr' at the one place they're merged
+ * (see spec §4).
+ */
+export type TrackedTask = {
+  kind: TaskKind;
+  owner: string;
+  repo: string;
+  number: number;
+  /** ISO 8601 timestamp of when it was added to the task list. */
+  addedAt: string;
+};
+
+/** An issue after normalisation. Issues carry none of a PR's CI/review/draft signals. */
+export type NormalisedIssue = {
+  key: PrKey;
+  owner: string;
+  repo: string;
+  number: number;
+  title: string;
+  url: string;
+  author: string;
+  nameWithOwner: string;
+  updatedAt: string;
+  lifecycle: 'OPEN' | 'CLOSED';
+};
+
+export type IssueEntry =
+  | { status: 'ok'; key: PrKey; tracked: TrackedTask; issue: NormalisedIssue }
+  | { status: 'error'; key: PrKey; tracked: TrackedTask; message: string };
 
 /**
  * Merge status of one slot. This tab tracks nothing else — no CI, no review.
