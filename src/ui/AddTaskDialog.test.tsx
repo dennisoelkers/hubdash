@@ -11,7 +11,9 @@ function setup(onAdd = vi.fn().mockReturnValue({ added: true, key: 'k' })) {
 
 describe('AddTaskDialog', () => {
   it('renders nothing when closed', () => {
-    render(<AddTaskDialog open={false} onClose={() => {}} onAdd={() => ({ added: true, key: 'k' })} />);
+    render(
+      <AddTaskDialog open={false} onClose={() => {}} onAdd={() => ({ added: true, key: 'k' })} />,
+    );
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
   });
 
@@ -51,7 +53,10 @@ describe('AddTaskDialog', () => {
 
   it('shows the parser error and does not add, for the owner/repo#N shorthand', async () => {
     const { onAdd, onClose } = setup();
-    await userEvent.type(screen.getByLabelText(/issue or pull request url/i), 'Example/example-server#4821');
+    await userEvent.type(
+      screen.getByLabelText(/issue or pull request url/i),
+      'Example/example-server#4821',
+    );
     await userEvent.click(screen.getByRole('button', { name: /^add$/i }));
 
     expect(screen.getByRole('alert')).toHaveTextContent(/full github link/i);
@@ -86,7 +91,9 @@ describe('AddTaskDialog', () => {
       screen.getByLabelText(/issue or pull request url/i),
       'https://github.com/Example/example-server/pull/1',
     );
-    rerender(<AddTaskDialog open={false} onClose={() => {}} onAdd={() => ({ added: true, key: 'k' })} />);
+    rerender(
+      <AddTaskDialog open={false} onClose={() => {}} onAdd={() => ({ added: true, key: 'k' })} />,
+    );
     rerender(<AddTaskDialog open onClose={() => {}} onAdd={() => ({ added: true, key: 'k' })} />);
     expect(screen.getByLabelText(/issue or pull request url/i)).toHaveValue('');
   });

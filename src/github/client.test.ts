@@ -208,7 +208,13 @@ describe('fetchBoard — transport failures', () => {
     );
     const two: TrackedTask[] = [
       ...prs,
-      { kind: 'pr', owner: 'AcmeCorp', repo: 'secrets', number: 7, addedAt: '2026-08-27T09:00:00Z' },
+      {
+        kind: 'pr',
+        owner: 'AcmeCorp',
+        repo: 'secrets',
+        number: 7,
+        addedAt: '2026-08-27T09:00:00Z',
+      },
     ];
 
     const outcome = await fetchBoard('t', two, { fetchImpl });

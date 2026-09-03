@@ -28,7 +28,9 @@ export function TasksTab({ tasks, entries, flashedKey, onRemoveTask, onReorder }
 
   if (tasks.length === 0) {
     return (
-      <Empty>Add an issue or pull request — use the button, paste a URL, or drop a link here.</Empty>
+      <Empty>
+        Add an issue or pull request — use the button, paste a URL, or drop a link here.
+      </Empty>
     );
   }
 

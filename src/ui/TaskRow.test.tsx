@@ -137,7 +137,12 @@ describe('TaskRow — an issue task', () => {
   };
 
   it('shows the issue title and a waiting badge when open', () => {
-    const entry: IssueEntry = { status: 'ok', key: issueOf().key, tracked: issueTask, issue: issueOf() };
+    const entry: IssueEntry = {
+      status: 'ok',
+      key: issueOf().key,
+      tracked: issueTask,
+      issue: issueOf(),
+    };
     render(
       <TaskRow
         task={issueTask}

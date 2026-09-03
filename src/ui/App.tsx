@@ -387,7 +387,11 @@ export function App({ deps = {} }: { deps?: AppDeps } = {}) {
               : setTaskDialogOpen(true)
         }
         addLabel={
-          activeTab === 'board' ? '+ Add PR' : activeTab === 'backports' ? '+ Track backports' : '+ Add task'
+          activeTab === 'board'
+            ? '+ Add PR'
+            : activeTab === 'backports'
+              ? '+ Track backports'
+              : '+ Add task'
         }
         onRefresh={refresh}
         isPolling={isPolling}

@@ -18,7 +18,13 @@ function fakeStorage(initial: Record<string, string> = {}): Storage {
 describe('isTrackedTask', () => {
   it('accepts a well-formed task of either kind', () => {
     expect(
-      isTrackedTask({ kind: 'pr', owner: 'a', repo: 'b', number: 1, addedAt: '2026-08-27T09:00:00Z' }),
+      isTrackedTask({
+        kind: 'pr',
+        owner: 'a',
+        repo: 'b',
+        number: 1,
+        addedAt: '2026-08-27T09:00:00Z',
+      }),
     ).toBe(true);
     expect(
       isTrackedTask({
@@ -45,7 +51,13 @@ describe('isTrackedTask', () => {
 
   it('rejects a non-positive or non-integer number', () => {
     expect(
-      isTrackedTask({ kind: 'pr', owner: 'a', repo: 'b', number: 0, addedAt: '2026-08-27T09:00:00Z' }),
+      isTrackedTask({
+        kind: 'pr',
+        owner: 'a',
+        repo: 'b',
+        number: 0,
+        addedAt: '2026-08-27T09:00:00Z',
+      }),
     ).toBe(false);
     expect(
       isTrackedTask({

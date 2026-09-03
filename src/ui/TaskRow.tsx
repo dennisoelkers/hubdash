@@ -119,11 +119,20 @@ function urlOf(task: TrackedTask, entry: PrEntry | IssueEntry | undefined): stri
 }
 
 function nameWithOwnerOf(task: TrackedTask, entry: PrEntry | IssueEntry | undefined): string {
-  if (entry?.status === 'ok') return 'pr' in entry ? entry.pr.nameWithOwner : entry.issue.nameWithOwner;
+  if (entry?.status === 'ok')
+    return 'pr' in entry ? entry.pr.nameWithOwner : entry.issue.nameWithOwner;
   return `${task.owner}/${task.repo}`;
 }
 
-export function TaskRow({ task, entry, flashed, onRemove, onDragStart, onDragOver, onDrop }: TaskRowProps) {
+export function TaskRow({
+  task,
+  entry,
+  flashed,
+  onRemove,
+  onDragStart,
+  onDragOver,
+  onDrop,
+}: TaskRowProps) {
   const [dragging, setDragging] = useState(false);
   const status = statusView(entry);
 
@@ -154,7 +163,11 @@ export function TaskRow({ task, entry, flashed, onRemove, onDragStart, onDragOve
       <Title>{titleOf(entry)}</Title>
       <Meta>{nameWithOwnerOf(task, entry)}</Meta>
       <Status $tone={status.tone}>{status.label}</Status>
-      <RemoveButton type="button" aria-label={`Remove #${task.number} from tasks`} onClick={onRemove}>
+      <RemoveButton
+        type="button"
+        aria-label={`Remove #${task.number} from tasks`}
+        onClick={onRemove}
+      >
         ✕
       </RemoveButton>
     </Row>
