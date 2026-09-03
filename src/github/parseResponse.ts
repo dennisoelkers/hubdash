@@ -1,7 +1,9 @@
 import { prKey } from '../domain/prKey';
 import type {
   CiState,
+  IssueEntry,
   MergeableState,
+  NormalisedIssue,
   NormalisedPr,
   PollResult,
   PrEntry,
@@ -9,6 +11,7 @@ import type {
   RateLimit,
   ReviewDecision,
   TrackedPr,
+  TrackedTask,
 } from '../types';
 import { aliasFor } from './buildQuery';
 import { asRecord } from './json';
@@ -42,6 +45,11 @@ function asNumber(value: unknown, fallback: number): number {
  */
 function asLifecycle(value: unknown): PrLifecycle {
   return value === 'MERGED' || value === 'CLOSED' ? value : 'OPEN';
+}
+
+/** Same reasoning as `asLifecycle`, for `IssueState` — which has no MERGED. */
+function asIssueLifecycle(value: unknown): 'OPEN' | 'CLOSED' {
+  return value === 'CLOSED' ? 'CLOSED' : 'OPEN';
 }
 
 function asReviewDecision(value: unknown): ReviewDecision {
@@ -129,6 +137,27 @@ function normalisePr(node: Record<string, unknown>, tracked: TrackedPr): Normali
   };
 }
 
+function normaliseIssue(node: Record<string, unknown>, tracked: TrackedTask): NormalisedIssue {
+  return {
+    key: prKey(tracked.owner, tracked.repo, tracked.number),
+    owner: tracked.owner,
+    repo: tracked.repo,
+    number: asNumber(node.number, tracked.number),
+    title: asString(node.title, `#${tracked.number}`),
+    url: asString(
+      node.url,
+      `https://github.com/${tracked.owner}/${tracked.repo}/issues/${tracked.number}`,
+    ),
+    author: asString(asRecord(node.author)?.login, 'unknown'),
+    nameWithOwner: asString(
+      asRecord(node.repository)?.nameWithOwner,
+      `${tracked.owner}/${tracked.repo}`,
+    ),
+    updatedAt: asString(node.updatedAt, tracked.addedAt),
+    lifecycle: asIssueLifecycle(node.state),
+  };
+}
+
 function normaliseRateLimit(value: unknown): RateLimit | null {
   const record = asRecord(value);
   if (!record) return null;
@@ -150,7 +179,7 @@ function errorsByAlias(raw: Record<string, unknown>): Map<string, string> {
     if (!error || !Array.isArray(error.path)) continue;
     const alias = error.path[0];
     if (typeof alias !== 'string' || byAlias.has(alias)) continue;
-    byAlias.set(alias, asString(error.message, 'This pull request could not be loaded.'));
+    byAlias.set(alias, asString(error.message, 'This could not be loaded.'));
   }
   return byAlias;
 }
@@ -164,12 +193,19 @@ function firstErrorMessage(raw: Record<string, unknown>): string | null {
   return null;
 }
 
+/** Strips `kind` back off so `PrEntry.tracked` stays exactly `TrackedPr`-shaped. */
+function stripKind(task: TrackedTask): TrackedPr {
+  return { owner: task.owner, repo: task.repo, number: task.number, addedAt: task.addedAt };
+}
+
 /**
- * Turns one board response into entries, one per tracked PR in tracked order.
- * A PR that failed on its own becomes an errored entry; only a payload with no
- * usable `data` fails the whole poll.
+ * Turns one poll response into entries, one per tracked task in tracked
+ * order. A pr-kind target produces a PrEntry (unchanged shape); an
+ * issue-kind target produces an IssueEntry in the separate `issueEntries`
+ * array (spec §4, §6). Something that failed to resolve on its own becomes
+ * an errored entry; only a payload with no usable `data` fails the whole poll.
  */
-export function parseResponse(raw: unknown, prs: TrackedPr[]): ParseResponseResult {
+export function parseResponse(raw: unknown, targets: TrackedTask[]): ParseResponseResult {
   const envelope = asRecord(raw);
   if (!envelope) {
     return { ok: false, error: 'GitHub returned a response that could not be read.' };
@@ -188,25 +224,49 @@ export function parseResponse(raw: unknown, prs: TrackedPr[]): ParseResponseResu
 
   const aliasErrors = errorsByAlias(envelope);
 
-  const entries: PrEntry[] = prs.map((tracked, index) => {
+  const entries: PrEntry[] = [];
+  const issueEntries: IssueEntry[] = [];
+
+  targets.forEach((tracked, index) => {
     const alias = aliasFor(index);
     const key = prKey(tracked.owner, tracked.repo, tracked.number);
     const repository = asRecord(data[alias]);
-    const node = asRecord(repository?.pullRequest);
 
+    if (tracked.kind === 'issue') {
+      const node = asRecord(repository?.issue);
+      if (!node) {
+        issueEntries.push({
+          status: 'error',
+          key,
+          tracked,
+          message:
+            aliasErrors.get(alias) ??
+            'This issue could not be loaded. It may have been deleted, or the token may not have access.',
+        });
+        return;
+      }
+      issueEntries.push({ status: 'ok', key, tracked, issue: normaliseIssue(node, tracked) });
+      return;
+    }
+
+    const trackedPr = stripKind(tracked);
+    const node = asRecord(repository?.pullRequest);
     if (!node) {
-      return {
+      entries.push({
         status: 'error',
         key,
-        tracked,
+        tracked: trackedPr,
         message:
           aliasErrors.get(alias) ??
           'This pull request could not be loaded. It may have been deleted, or the token may not have access.',
-      };
+      });
+      return;
     }
-
-    return { status: 'ok', key, tracked, pr: normalisePr(node, tracked) };
+    entries.push({ status: 'ok', key, tracked: trackedPr, pr: normalisePr(node, trackedPr) });
   });
 
-  return { ok: true, result: { entries, rateLimit: normaliseRateLimit(data.rateLimit) } };
+  return {
+    ok: true,
+    result: { entries, issueEntries, rateLimit: normaliseRateLimit(data.rateLimit) },
+  };
 }

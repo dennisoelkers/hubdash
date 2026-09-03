@@ -1,9 +1,15 @@
 import { describe, expect, it } from 'vitest';
-import type { TrackedPr } from '../types';
+import type { TrackedTask } from '../types';
 import { parseResponse } from './parseResponse';
 
-const prs: TrackedPr[] = [
-  { owner: 'Example', repo: 'example-server', number: 4821, addedAt: '2026-08-27T09:00:00Z' },
+const prs: TrackedTask[] = [
+  {
+    kind: 'pr',
+    owner: 'Example',
+    repo: 'example-server',
+    number: 4821,
+    addedAt: '2026-08-27T09:00:00Z',
+  },
 ];
 
 function rollup(state: string, nodes: unknown[] = []) {
@@ -33,6 +39,19 @@ function prNode(overrides: Record<string, unknown> = {}, rollupValue: unknown = 
   };
 }
 
+function issueNode(overrides: Record<string, unknown> = {}) {
+  return {
+    number: 55,
+    title: 'Sort order is wrong on empty input',
+    url: 'https://github.com/Example/example-server/issues/55',
+    state: 'OPEN',
+    updatedAt: '2026-08-27T10:00:00Z',
+    author: { login: 'octocat' },
+    repository: { nameWithOwner: 'Example/example-server' },
+    ...overrides,
+  };
+}
+
 function response(overrides: Record<string, unknown> = {}, errors?: unknown[]) {
   return {
     data: {
@@ -44,7 +63,7 @@ function response(overrides: Record<string, unknown> = {}, errors?: unknown[]) {
   };
 }
 
-function parseOk(raw: unknown, tracked: TrackedPr[] = prs) {
+function parseOk(raw: unknown, tracked: TrackedTask[] = prs) {
   const result = parseResponse(raw, tracked);
   if (!result.ok) throw new Error(`expected success, got: ${result.error}`);
   return result.result;
@@ -52,8 +71,9 @@ function parseOk(raw: unknown, tracked: TrackedPr[] = prs) {
 
 describe('parseResponse — happy path', () => {
   it('normalises a PR', () => {
-    const { entries } = parseOk(response());
+    const { entries, issueEntries } = parseOk(response());
     expect(entries).toHaveLength(1);
+    expect(issueEntries).toHaveLength(0);
     const entry = entries[0];
     if (entry?.status !== 'ok') throw new Error('expected an ok entry');
     expect(entry.pr).toMatchObject({
@@ -73,6 +93,13 @@ describe('parseResponse — happy path', () => {
       failingCheckCount: 0,
       approvalCount: 0,
       requestedReviewerCount: 0,
+    });
+    // PrEntry.tracked stays exactly TrackedPr-shaped — no `kind` leaks in.
+    expect(entry.tracked).toEqual({
+      owner: 'Example',
+      repo: 'example-server',
+      number: 4821,
+      addedAt: '2026-08-27T09:00:00Z',
     });
   });
 
@@ -120,7 +147,6 @@ describe('parseResponse — CI normalisation', () => {
   }
 
   it('maps a null rollup to "none", not to a failure', () => {
-    // A repo with no CI at all. Spec §5.2 / §6 rule 6 depend on this.
     expect(ciOf(null).ci).toBe('none');
   });
 
@@ -140,8 +166,6 @@ describe('parseResponse — CI normalisation', () => {
   });
 
   it('maps an unrecognised rollup state to pending rather than green or red', () => {
-    // Guessing "success" would show a false green; guessing "failure" would
-    // cry wolf. Pending is the only honest fallback.
     expect(ciOf(rollup('SOMETHING_NEW')).ci).toBe('pending');
   });
 
@@ -166,7 +190,6 @@ describe('parseResponse — CI normalisation', () => {
   });
 
   it('reports a red rollup with no visible failing context as failing with a zero count', () => {
-    // The >100 context case; badges render this as "build failing".
     expect(ciOf(rollup('FAILURE', []))).toEqual({ ci: 'failure', failing: 0 });
   });
 });
@@ -194,9 +217,9 @@ describe('parseResponse — per-PR failures', () => {
   });
 
   it('lets healthy PRs through when a sibling fails', () => {
-    const two: TrackedPr[] = [
+    const two: TrackedTask[] = [
       ...prs,
-      { owner: 'Example', repo: 'gone', number: 1, addedAt: '2026-08-27T09:00:00Z' },
+      { kind: 'pr', owner: 'Example', repo: 'gone', number: 1, addedAt: '2026-08-27T09:00:00Z' },
     ];
     const raw = response({ pr1: null }, [{ message: 'Not found', path: ['pr1'] }]);
     const { entries } = parseOk(raw, two);
@@ -205,12 +228,72 @@ describe('parseResponse — per-PR failures', () => {
   });
 
   it('returns one entry per tracked PR, in tracked order', () => {
-    const two: TrackedPr[] = [
+    const two: TrackedTask[] = [
       ...prs,
-      { owner: 'Example', repo: 'other', number: 7, addedAt: '2026-08-27T09:00:00Z' },
+      { kind: 'pr', owner: 'Example', repo: 'other', number: 7, addedAt: '2026-08-27T09:00:00Z' },
     ];
     const { entries } = parseOk(response(), two);
     expect(entries.map((entry) => entry.tracked.number)).toEqual([4821, 7]);
+  });
+});
+
+describe('parseResponse — issues', () => {
+  const issueTarget: TrackedTask = {
+    kind: 'issue',
+    owner: 'Example',
+    repo: 'example-server',
+    number: 55,
+    addedAt: '2026-08-27T09:00:00Z',
+  };
+
+  it('normalises an issue into issueEntries, not entries', () => {
+    const raw = response({ pr0: { issue: issueNode() } });
+    const { entries, issueEntries } = parseOk(raw, [issueTarget]);
+    expect(entries).toHaveLength(0);
+    expect(issueEntries).toHaveLength(1);
+    const entry = issueEntries[0];
+    if (entry?.status !== 'ok') throw new Error('expected an ok entry');
+    expect(entry.issue).toEqual({
+      key: 'example/example-server#55',
+      owner: 'Example',
+      repo: 'example-server',
+      number: 55,
+      title: 'Sort order is wrong on empty input',
+      url: 'https://github.com/Example/example-server/issues/55',
+      author: 'octocat',
+      nameWithOwner: 'Example/example-server',
+      updatedAt: '2026-08-27T10:00:00Z',
+      lifecycle: 'OPEN',
+    });
+  });
+
+  it('maps a CLOSED issue state to lifecycle CLOSED', () => {
+    const raw = response({ pr0: { issue: issueNode({ state: 'CLOSED' }) } });
+    const entry = parseOk(raw, [issueTarget]).issueEntries[0];
+    if (entry?.status !== 'ok') throw new Error('expected an ok entry');
+    expect(entry.issue.lifecycle).toBe('CLOSED');
+  });
+
+  it('marks an issue errored when its alias came back null', () => {
+    const raw = response({ pr0: null });
+    const entry = parseOk(raw, [issueTarget]).issueEntries[0];
+    if (entry?.status !== 'error') throw new Error('expected an error entry');
+    expect(entry.message).toBeTruthy();
+  });
+
+  it('marks an issue errored when the repository resolved but the issue did not', () => {
+    const raw = response({ pr0: { issue: null } });
+    const entry = parseOk(raw, [issueTarget]).issueEntries[0];
+    expect(entry?.status).toBe('error');
+  });
+
+  it('splits a mixed pr+issue response into the two arrays, in tracked order', () => {
+    const raw = response({ pr0: { pullRequest: prNode() }, pr1: { issue: issueNode() } });
+    const { entries, issueEntries } = parseOk(raw, [...prs, issueTarget]);
+    expect(entries).toHaveLength(1);
+    expect(issueEntries).toHaveLength(1);
+    expect(entries[0]?.key).toBe('example/example-server#4821');
+    expect(issueEntries[0]?.key).toBe('example/example-server#55');
   });
 });
 
