@@ -1,4 +1,4 @@
-import type { FetchOutcome, TrackedPr, TransportError } from '../types';
+import type { FetchOutcome, TrackedTask, TransportError } from '../types';
 import { buildQuery, literal } from './buildQuery';
 import { asRecord } from './json';
 import { parseResponse } from './parseResponse';
@@ -156,13 +156,13 @@ async function post(
 
 export async function fetchBoard(
   token: string,
-  prs: TrackedPr[],
+  targets: TrackedTask[],
   options: FetchBoardOptions = {},
 ): Promise<FetchOutcome> {
-  const posted = await post(token, buildQuery(prs), options);
+  const posted = await post(token, buildQuery(targets), options);
   if (!posted.ok) return { ok: false, error: posted.error };
 
-  const parsed = parseResponse(posted.body, prs);
+  const parsed = parseResponse(posted.body, targets);
   if (!parsed.ok) return { ok: false, error: { kind: 'malformed', message: parsed.error } };
 
   return { ok: true, result: parsed.result };

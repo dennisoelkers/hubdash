@@ -1,9 +1,15 @@
 import { describe, expect, it, vi } from 'vitest';
-import type { TrackedPr } from '../types';
+import type { TrackedTask } from '../types';
 import { GITHUB_GRAPHQL_URL, fetchBoard, fetchPrBody, validateToken } from './client';
 
-const prs: TrackedPr[] = [
-  { owner: 'Example', repo: 'example-server', number: 4821, addedAt: '2026-08-27T09:00:00Z' },
+const prs: TrackedTask[] = [
+  {
+    kind: 'pr',
+    owner: 'Example',
+    repo: 'example-server',
+    number: 4821,
+    addedAt: '2026-08-27T09:00:00Z',
+  },
 ];
 
 function jsonResponse(body: unknown, init: ResponseInit = {}): Response {
@@ -64,7 +70,8 @@ describe('fetchBoard — request shape', () => {
 
   it('issues exactly one request no matter how many PRs are tracked', async () => {
     const fetchImpl = vi.fn().mockResolvedValue(jsonResponse(okBody()));
-    const many: TrackedPr[] = Array.from({ length: 20 }, (_, index) => ({
+    const many: TrackedTask[] = Array.from({ length: 20 }, (_, index) => ({
+      kind: 'pr',
       owner: 'Example',
       repo: 'example-server',
       number: index + 1,
@@ -199,9 +206,9 @@ describe('fetchBoard — transport failures', () => {
         ],
       }),
     );
-    const two: TrackedPr[] = [
+    const two: TrackedTask[] = [
       ...prs,
-      { owner: 'AcmeCorp', repo: 'secrets', number: 7, addedAt: '2026-08-27T09:00:00Z' },
+      { kind: 'pr', owner: 'AcmeCorp', repo: 'secrets', number: 7, addedAt: '2026-08-27T09:00:00Z' },
     ];
 
     const outcome = await fetchBoard('t', two, { fetchImpl });
