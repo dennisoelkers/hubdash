@@ -6,16 +6,27 @@ import { formatAgo } from '../domain/formatAgo';
 import { prKey } from '../domain/prKey';
 import { groupIntoColumns } from '../domain/sort';
 import { fetchBoard, fetchPrBody } from '../github/client';
+import { parseTaskUrl } from '../github/parseTaskUrl';
 import type { ParsedPr } from '../github/parseUrl';
 import { parsePrUrl } from '../github/parseUrl';
 import { useBackportGroups } from '../hooks/useBackportGroups';
 import { useDragAndPaste } from '../hooks/useDragAndPaste';
 import { usePolling } from '../hooks/usePolling';
+import { useTasks } from '../hooks/useTasks';
 import { useTrackedPrs } from '../hooks/useTrackedPrs';
 import { clearToken, loadToken, saveToken } from '../storage/token';
-import type { ColumnId, PrEntry, PrKey, RateLimit, TrackedPr, TransportError } from '../types';
+import type {
+  ColumnId,
+  IssueEntry,
+  PrEntry,
+  PrKey,
+  RateLimit,
+  TrackedTask,
+  TransportError,
+} from '../types';
 import { AddBackportGroupDialog } from './AddBackportGroupDialog';
 import { AddPrDialog } from './AddPrDialog';
+import { AddTaskDialog } from './AddTaskDialog';
 import { BackportsTab } from './BackportsTab';
 import { Banner } from './Banner';
 import { BoardTab } from './BoardTab';
@@ -27,6 +38,7 @@ import type { TokenValidator } from './SettingsDialog';
 import { SettingsDialog } from './SettingsDialog';
 import type { TabId } from './TabBar';
 import { TabBar } from './TabBar';
+import { TasksTab } from './TasksTab';
 import { TopBar } from './TopBar';
 
 export const POLL_INTERVAL_MS = 15000;
@@ -111,28 +123,40 @@ export function App({ deps = {} }: { deps?: AppDeps } = {}) {
     dismissStorageError: dismissBackportStorageError,
   } = useBackportGroups({ storage, clock });
 
-  // Both tabs are fed by one poll. Twenty PRs spread across board and backports
+  const {
+    tasks,
+    addTask,
+    removeTask,
+    reorderTasks,
+    storageError: taskStorageError,
+    dismissStorageError: dismissTaskStorageError,
+  } = useTasks({ storage, clock });
+
+  // All three tabs are fed by one poll. Twenty PRs spread across board and backports
   // still cost one GraphQL request, because the query batches by alias — see
   // spec §9. Declared here, above `canPoll`, deliberately: `canPoll` and `poll`
   // are defined further down but still *before* the other memos, so grouping
   // this with `columns` would read `pollTargets` from its temporal dead zone —
   // a render-time ReferenceError that tsc cannot see.
   const pollTargets = useMemo(() => {
-    const byKey = new Map<PrKey, TrackedPr>();
-    for (const pr of prs) byKey.set(prKey(pr.owner, pr.repo, pr.number), pr);
-    // First writer wins, deliberately: when the same PR is on the board *and* in
-    // a group, the board's entry is the one that survives, because the board
-    // owns the tracked list — its `addedAt`, and the owner/repo casing an
-    // errored entry renders, come from there rather than from whichever loop
-    // happened to run last.
+    const byKey = new Map<PrKey, TrackedTask>();
+    for (const pr of prs) byKey.set(prKey(pr.owner, pr.repo, pr.number), { ...pr, kind: 'pr' });
+    // First writer wins, deliberately: when the same item is tracked on more
+    // than one tab, the earliest-registered source's `addedAt` (and the
+    // owner/repo casing an errored entry renders) is the one that survives —
+    // see spec §4. Order here is board, then backports, then tasks.
     for (const group of groups) {
       for (const pr of groupPrs(group)) {
         const key = prKey(pr.owner, pr.repo, pr.number);
-        if (!byKey.has(key)) byKey.set(key, pr);
+        if (!byKey.has(key)) byKey.set(key, { ...pr, kind: 'pr' });
       }
     }
+    for (const task of tasks) {
+      const key = prKey(task.owner, task.repo, task.number);
+      if (!byKey.has(key)) byKey.set(key, task);
+    }
     return [...byKey.values()];
-  }, [prs, groups]);
+  }, [prs, groups, tasks]);
 
   // Both halves of the load are used: an unreadable token is treated as absent
   // *and reported*, the same contract the tracked list already honours.
@@ -140,6 +164,7 @@ export function App({ deps = {} }: { deps?: AppDeps } = {}) {
   const [token, setToken] = useState<string | null>(storedToken.token);
   const [tokenError, setTokenError] = useState<string | null>(storedToken.error);
   const [entries, setEntries] = useState<PrEntry[]>([]);
+  const [issueEntries, setIssueEntries] = useState<IssueEntry[]>([]);
   const [rateLimit, setRateLimit] = useState<RateLimit | null>(null);
   const [lastUpdatedAt, setLastUpdatedAt] = useState<string | null>(null);
   const [transportError, setTransportError] = useState<TransportError | null>(null);
@@ -152,16 +177,18 @@ export function App({ deps = {} }: { deps?: AppDeps } = {}) {
   // in that case too.
   const [settingsOpen, setSettingsOpen] = useState(() => storedToken.token === null);
   const [location, navigate] = useLocation();
-  const activeTab: TabId = location === '/backports' ? 'backports' : 'board';
+  const activeTab: TabId =
+    location === '/backports' ? 'backports' : location === '/tasks' ? 'tasks' : 'board';
   const [backportDialogOpen, setBackportDialogOpen] = useState(false);
   const [backportInitialUrl, setBackportInitialUrl] = useState<string | undefined>(undefined);
+  const [taskDialogOpen, setTaskDialogOpen] = useState(false);
   const [tick, setTick] = useState(() => nowMs());
 
   // Spec round 2 §3: the URL is the only source of truth for which tab shows.
   // `/` and anything unrecognised settle on `/pulls`; `replace` so a redirect
   // never leaves a dead entry in browser history.
   useEffect(() => {
-    if (location !== '/pulls' && location !== '/backports') {
+    if (location !== '/pulls' && location !== '/backports' && location !== '/tasks') {
       navigate('/pulls', { replace: true });
     }
   }, [location, navigate]);
@@ -194,6 +221,7 @@ export function App({ deps = {} }: { deps?: AppDeps } = {}) {
     }
     reportTransportError(null);
     setEntries(outcome.result.entries);
+    setIssueEntries(outcome.result.issueEntries);
     setRateLimit(outcome.result.rateLimit);
     setLastUpdatedAt(new Date(nowMs()).toISOString());
   }, [canPoll, token, pollTargets, fetchImpl, nowMs, reportTransportError]);
@@ -246,12 +274,34 @@ export function App({ deps = {} }: { deps?: AppDeps } = {}) {
     [addGroup, flash],
   );
 
+  const addTaskParsed = useCallback(
+    (parsed: Parameters<typeof addTask>[0]) => {
+      const outcome = addTask(parsed);
+      if (!outcome.added) flash(outcome.key);
+      return outcome;
+    },
+    [addTask, flash],
+  );
+
   // Spec round 2 §4: a valid link adds to the board when the Board tab is
   // active, and opens the create-group dialog pre-filled when the Backports
   // tab is active. A drop landing on an existing slot never reaches here —
-  // `SlotRow` stops it from propagating this far (Task 2).
+  // `SlotRow` stops it from propagating this far (Task 2). The Tasks tab
+  // (spec §8) adds directly too, like the board — there is no extra field to
+  // collect first the way Backports needs a version list.
   const addFromText = useCallback(
     (text: string) => {
+      if (activeTab === 'tasks') {
+        const parsed = parseTaskUrl(text);
+        if (!parsed.ok) {
+          setInputError(parsed.error);
+          return;
+        }
+        setInputError(null);
+        addTaskParsed(parsed.value);
+        return;
+      }
+
       const parsed = parsePrUrl(text);
       if (!parsed.ok) {
         setInputError(parsed.error);
@@ -265,7 +315,7 @@ export function App({ deps = {} }: { deps?: AppDeps } = {}) {
       setBackportInitialUrl(text);
       setBackportDialogOpen(true);
     },
-    [activeTab, addParsed],
+    [activeTab, addParsed, addTaskParsed],
   );
 
   const { isDragging } = useDragAndPaste(addFromText);
@@ -287,6 +337,22 @@ export function App({ deps = {} }: { deps?: AppDeps } = {}) {
   }, [entries, prs]);
 
   const entryMap = useMemo(() => new Map(entries.map((entry) => [entry.key, entry])), [entries]);
+
+  // Board/Backports keep reading `entries`/`entryMap` exactly as before — this
+  // is Tasks' own view, mixing in pr-kind entries it tracks plus every
+  // issue-kind entry (issues are only ever tracked here, never on the other
+  // two tabs).
+  const taskEntryMap = useMemo(() => {
+    const taskKeys = new Set(tasks.map((task) => prKey(task.owner, task.repo, task.number)));
+    const map = new Map<PrKey, PrEntry | IssueEntry>();
+    for (const entry of entries) {
+      if (taskKeys.has(entry.key)) map.set(entry.key, entry);
+    }
+    for (const entry of issueEntries) {
+      map.set(entry.key, entry);
+    }
+    return map;
+  }, [entries, issueEntries, tasks]);
 
   const freshness = useMemo(
     () =>
@@ -313,8 +379,16 @@ export function App({ deps = {} }: { deps?: AppDeps } = {}) {
     <>
       <GlobalStyle />
       <TopBar
-        onAdd={() => (activeTab === 'board' ? setAddOpen(true) : setBackportDialogOpen(true))}
-        addLabel={activeTab === 'board' ? '+ Add PR' : '+ Track backports'}
+        onAdd={() =>
+          activeTab === 'board'
+            ? setAddOpen(true)
+            : activeTab === 'backports'
+              ? setBackportDialogOpen(true)
+              : setTaskDialogOpen(true)
+        }
+        addLabel={
+          activeTab === 'board' ? '+ Add PR' : activeTab === 'backports' ? '+ Track backports' : '+ Add task'
+        }
         onRefresh={refresh}
         isPolling={isPolling}
         freshness={freshness}
@@ -330,6 +404,11 @@ export function App({ deps = {} }: { deps?: AppDeps } = {}) {
       {backportStorageError === null ? null : (
         <Banner tone="warn" onDismiss={dismissBackportStorageError}>
           {backportStorageError}
+        </Banner>
+      )}
+      {taskStorageError === null ? null : (
+        <Banner tone="warn" onDismiss={dismissTaskStorageError}>
+          {taskStorageError}
         </Banner>
       )}
       {tokenError === null ? null : (
@@ -357,9 +436,12 @@ export function App({ deps = {} }: { deps?: AppDeps } = {}) {
         <>
           <TabBar
             active={activeTab}
-            onChange={(tab) => navigate(tab === 'board' ? '/pulls' : '/backports')}
+            onChange={(tab) =>
+              navigate(tab === 'board' ? '/pulls' : tab === 'backports' ? '/backports' : '/tasks')
+            }
             boardCount={prs.length - columns.archive.length}
             backportsCount={groups.filter((group) => !group.archived).length}
+            tasksCount={tasks.length}
           />
           {activeTab === 'board' ? (
             <BoardTab
@@ -368,7 +450,7 @@ export function App({ deps = {} }: { deps?: AppDeps } = {}) {
               flashedKey={flashedKey}
               onRemove={handleRemove}
             />
-          ) : (
+          ) : activeTab === 'backports' ? (
             // `hasToken` is hardcoded because this whole branch is already
             // inside `token === null ? ... :` — BackportsTab's own no-token
             // empty state exists for its component tests, not for this call.
@@ -382,6 +464,14 @@ export function App({ deps = {} }: { deps?: AppDeps } = {}) {
               onRemoveVersion={removeVersion}
               onFillSlot={fillSlot}
               onArchiveGroup={archiveGroup}
+            />
+          ) : (
+            <TasksTab
+              tasks={tasks}
+              entries={taskEntryMap}
+              flashedKey={flashedKey}
+              onRemoveTask={removeTask}
+              onReorder={reorderTasks}
             />
           )}
         </>
@@ -397,6 +487,11 @@ export function App({ deps = {} }: { deps?: AppDeps } = {}) {
         onAdd={addGroupOrFlash}
         initialUrl={backportInitialUrl}
         detectVersions={detectVersions}
+      />
+      <AddTaskDialog
+        open={taskDialogOpen}
+        onClose={() => setTaskDialogOpen(false)}
+        onAdd={addTaskParsed}
       />
       <SettingsDialog
         open={settingsOpen}
@@ -414,7 +509,7 @@ export function App({ deps = {} }: { deps?: AppDeps } = {}) {
           setToken(null);
         }}
       />
-      <DropOverlay visible={isDragging && activeTab === 'board'} />
+      <DropOverlay visible={isDragging && (activeTab === 'board' || activeTab === 'tasks')} />
       <Footer />
     </>
   );

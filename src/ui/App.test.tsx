@@ -79,6 +79,36 @@ function boardResponder(nodes: Record<string, unknown>) {
   });
 }
 
+function issueNode(number: number, overrides: Record<string, unknown> = {}) {
+  return {
+    number,
+    title: `Issue number ${number}`,
+    url: `https://github.com/Example/example-server/issues/${number}`,
+    state: 'OPEN',
+    updatedAt: '2026-08-27T10:00:00Z',
+    author: { login: 'octocat' },
+    repository: { nameWithOwner: 'Example/example-server' },
+    ...overrides,
+  };
+}
+
+/** Like `boardResponder`, but wraps each configured node under `{ issue: node }`. */
+function issueResponder(nodes: Record<string, unknown>) {
+  return vi.fn().mockImplementation(async (_url: string, init?: RequestInit) => {
+    const query = String(JSON.parse(String(init?.body)).query);
+    const data: Record<string, unknown> = {
+      rateLimit: { limit: 5000, cost: 1, remaining: 4812, resetAt: '2026-08-27T13:00:00Z' },
+    };
+    for (const [alias, node] of Object.entries(nodes)) {
+      if (query.includes(`${alias}: repository`)) data[alias] = { issue: node };
+    }
+    return new Response(JSON.stringify({ data }), {
+      status: 200,
+      headers: { 'content-type': 'application/json' },
+    });
+  });
+}
+
 /**
  * The GraphQL query text one of `fetchImpl`'s calls actually sent. The body is
  * JSON-encoded, exactly the shape `boardResponder` above parses; asserting
@@ -1071,6 +1101,145 @@ describe('App — routing', () => {
         'aria-selected',
         'true',
       ),
+    );
+  });
+});
+
+describe('App — the Tasks tab', () => {
+  it('starts empty and shows the prompt', async () => {
+    render(
+      <App deps={{ fetchImpl: vi.fn(), storage: fakeStorage({ [TOKEN_KEY]: storedToken }), clock, nowMs }} />,
+    );
+    window.history.pushState(null, '', '/tasks');
+    window.dispatchEvent(new PopStateEvent('popstate'));
+    expect(
+      await screen.findByText(/add an issue or pull request/i),
+    ).toBeInTheDocument();
+  });
+
+  it('adds a PR task via the dialog and shows its live status after a poll', async () => {
+    const fetchImpl = boardResponder({
+      pr0: prNode(4821, { reviewDecision: 'APPROVED' }),
+    });
+    render(
+      <App deps={{ fetchImpl, storage: fakeStorage({ [TOKEN_KEY]: storedToken }), clock, nowMs }} />,
+    );
+    window.history.pushState(null, '', '/tasks');
+    window.dispatchEvent(new PopStateEvent('popstate'));
+
+    await userEvent.click(await screen.findByRole('button', { name: /add task/i }));
+    await userEvent.type(
+      screen.getByLabelText(/issue or pull request url/i),
+      'https://github.com/Example/example-server/pull/4821',
+    );
+    await userEvent.click(screen.getByRole('button', { name: /^add$/i }));
+
+    expect(await screen.findByText('Change number 4821')).toBeInTheDocument();
+    await waitFor(() => expect(screen.getByText(/ready/i)).toBeInTheDocument());
+  });
+
+  it('adds an issue task and shows a waiting badge for an open issue', async () => {
+    const fetchImpl = issueResponder({ pr0: issueNode(55) });
+    render(
+      <App deps={{ fetchImpl, storage: fakeStorage({ [TOKEN_KEY]: storedToken }), clock, nowMs }} />,
+    );
+    window.history.pushState(null, '', '/tasks');
+    window.dispatchEvent(new PopStateEvent('popstate'));
+
+    await userEvent.click(await screen.findByRole('button', { name: /add task/i }));
+    await userEvent.type(
+      screen.getByLabelText(/issue or pull request url/i),
+      'https://github.com/Example/example-server/issues/55',
+    );
+    await userEvent.click(screen.getByRole('button', { name: /^add$/i }));
+
+    expect(await screen.findByText('Issue number 55')).toBeInTheDocument();
+    await waitFor(() => expect(screen.getByText(/waiting/i)).toBeInTheDocument());
+  });
+
+  it('sends one mixed pr+issue query when both a board PR and a task issue are tracked', async () => {
+    const fetchImpl = boardResponder({ pr0: prNode(4821) });
+    const storage = fakeStorage({
+      [TOKEN_KEY]: storedToken,
+      [TRACKED_PRS_KEY]: storedPrs(4821),
+    });
+    render(<App deps={{ fetchImpl, storage, clock, nowMs }} />);
+    await waitFor(() => expect(fetchImpl).toHaveBeenCalledTimes(1));
+
+    window.history.pushState(null, '', '/tasks');
+    window.dispatchEvent(new PopStateEvent('popstate'));
+    await userEvent.click(await screen.findByRole('button', { name: /add task/i }));
+    await userEvent.type(
+      screen.getByLabelText(/issue or pull request url/i),
+      'https://github.com/Example/example-server/issues/55',
+    );
+    await userEvent.click(screen.getByRole('button', { name: /^add$/i }));
+
+    await waitFor(() => expect(fetchImpl).toHaveBeenCalledTimes(2));
+    const query = queryOf(fetchImpl);
+    expect(query).toContain('pullRequest(number: 4821)');
+    expect(query).toContain('issue(number: 55)');
+    expect(query.match(/fragment prFields on PullRequest/g)).toHaveLength(1);
+    expect(query.match(/fragment issueFields on Issue/g)).toHaveLength(1);
+
+    // The second poll's response is still being processed (setEntries/
+    // setIssueEntries) when the assertions above run, since `waitFor` only
+    // waits for the fetch call count, not React's handling of its result —
+    // wait for a concrete sign it landed before the test ends.
+    await waitFor(() => expect(screen.getByTestId('freshness')).toHaveTextContent(/updated/i));
+  });
+
+  it('flashes rather than duplicates when the same task is added twice', async () => {
+    const fetchImpl = boardResponder({ pr0: prNode(4821) });
+    render(
+      <App deps={{ fetchImpl, storage: fakeStorage({ [TOKEN_KEY]: storedToken }), clock, nowMs }} />,
+    );
+    window.history.pushState(null, '', '/tasks');
+    window.dispatchEvent(new PopStateEvent('popstate'));
+
+    for (let i = 0; i < 2; i += 1) {
+      await userEvent.click(await screen.findByRole('button', { name: /add task/i }));
+      await userEvent.type(
+        screen.getByLabelText(/issue or pull request url/i),
+        'https://github.com/Example/example-server/pull/4821',
+      );
+      await userEvent.click(screen.getByRole('button', { name: /^add$/i }));
+    }
+
+    expect(screen.getAllByTestId('task-row')).toHaveLength(1);
+    expect(screen.getByTestId('task-row')).toHaveAttribute('data-flashed', 'true');
+  });
+
+  it('shows the tab count excluding nothing — every tracked task counts', async () => {
+    const fetchImpl = boardResponder({ pr0: prNode(4821, { state: 'MERGED' }) });
+    render(
+      <App deps={{ fetchImpl, storage: fakeStorage({ [TOKEN_KEY]: storedToken }), clock, nowMs }} />,
+    );
+    window.history.pushState(null, '', '/tasks');
+    window.dispatchEvent(new PopStateEvent('popstate'));
+
+    await userEvent.click(await screen.findByRole('button', { name: /add task/i }));
+    await userEvent.type(
+      screen.getByLabelText(/issue or pull request url/i),
+      'https://github.com/Example/example-server/pull/4821',
+    );
+    await userEvent.click(screen.getByRole('button', { name: /^add$/i }));
+
+    await waitFor(() =>
+      expect(screen.getByRole('tab', { name: /^tasks/i })).toHaveTextContent('1'),
+    );
+  });
+});
+
+describe('App — routing (Tasks)', () => {
+  it('renders the Tasks tab for /tasks', async () => {
+    window.history.pushState(null, '', '/tasks');
+    render(
+      <App deps={{ fetchImpl: vi.fn(), storage: fakeStorage({ [TOKEN_KEY]: storedToken }), clock, nowMs }} />,
+    );
+    expect(await screen.findByRole('tab', { name: /^tasks/i })).toHaveAttribute(
+      'aria-selected',
+      'true',
     );
   });
 });
