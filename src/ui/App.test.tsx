@@ -1243,3 +1243,67 @@ describe('App — routing (Tasks)', () => {
     );
   });
 });
+
+describe('App — keyboard shortcuts for tabs', () => {
+  it('switches to Backports on b, Tasks on t, and Pull Requests on p', async () => {
+    render(
+      <App deps={{ fetchImpl: vi.fn(), storage: fakeStorage({ [TOKEN_KEY]: storedToken }), clock, nowMs }} />,
+    );
+    await screen.findByRole('tab', { name: /pull requests/i });
+
+    await userEvent.keyboard('b');
+    expect(screen.getByRole('tab', { name: /backports/i })).toHaveAttribute('aria-selected', 'true');
+
+    await userEvent.keyboard('t');
+    expect(screen.getByRole('tab', { name: /^tasks/i })).toHaveAttribute('aria-selected', 'true');
+
+    await userEvent.keyboard('p');
+    expect(screen.getByRole('tab', { name: /pull requests/i })).toHaveAttribute(
+      'aria-selected',
+      'true',
+    );
+  });
+
+  it('does not switch tabs while typing the letter into a text field', async () => {
+    render(
+      <App deps={{ fetchImpl: vi.fn(), storage: fakeStorage({ [TOKEN_KEY]: storedToken }), clock, nowMs }} />,
+    );
+    await userEvent.click(await screen.findByRole('button', { name: /add pr/i }));
+    await userEvent.type(screen.getByLabelText(/pull request url/i), 'b');
+
+    expect(screen.getByRole('tab', { name: /pull requests/i })).toHaveAttribute(
+      'aria-selected',
+      'true',
+    );
+  });
+
+  it('does not switch tabs from a keystroke on a dialog button while the dialog is open', async () => {
+    render(
+      <App deps={{ fetchImpl: vi.fn(), storage: fakeStorage({ [TOKEN_KEY]: storedToken }), clock, nowMs }} />,
+    );
+    await userEvent.click(await screen.findByRole('button', { name: /add pr/i }));
+    screen.getByRole('button', { name: /cancel/i }).focus();
+
+    await userEvent.keyboard('b');
+
+    expect(screen.getByRole('dialog')).toBeInTheDocument();
+    expect(screen.getByRole('tab', { name: /pull requests/i })).toHaveAttribute(
+      'aria-selected',
+      'true',
+    );
+  });
+
+  it('ignores the shortcut when a modifier key is held', async () => {
+    render(
+      <App deps={{ fetchImpl: vi.fn(), storage: fakeStorage({ [TOKEN_KEY]: storedToken }), clock, nowMs }} />,
+    );
+    await screen.findByRole('tab', { name: /pull requests/i });
+
+    await userEvent.keyboard('{Control>}b{/Control}');
+
+    expect(screen.getByRole('tab', { name: /pull requests/i })).toHaveAttribute(
+      'aria-selected',
+      'true',
+    );
+  });
+});

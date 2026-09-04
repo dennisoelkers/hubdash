@@ -1,14 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { textFrom } from '../domain/dropText';
-
-function isEditable(target: EventTarget | null): boolean {
-  if (!(target instanceof HTMLElement)) return false;
-  return (
-    target instanceof HTMLInputElement ||
-    target instanceof HTMLTextAreaElement ||
-    target.isContentEditable
-  );
-}
+import { isEditable } from './isEditable';
 
 /**
  * The window-wide entry points for adding a PR: dropping a link from another

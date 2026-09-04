@@ -9,6 +9,7 @@ import { fetchBoard, fetchPrBody } from '../github/client';
 import { parseTaskUrl } from '../github/parseTaskUrl';
 import type { ParsedPr } from '../github/parseUrl';
 import { parsePrUrl } from '../github/parseUrl';
+import { isEditable } from '../hooks/isEditable';
 import { useBackportGroups } from '../hooks/useBackportGroups';
 import { useDragAndPaste } from '../hooks/useDragAndPaste';
 import { usePolling } from '../hooks/usePolling';
@@ -192,6 +193,25 @@ export function App({ deps = {} }: { deps?: AppDeps } = {}) {
       navigate('/pulls', { replace: true });
     }
   }, [location, navigate]);
+
+  // p/b/t switch tabs. Never while the user is typing — any text field,
+  // whether inside a dialog or an always-visible inline one like SlotRow's —
+  // and never while a dialog is open at all, even with focus on a button in
+  // it, since a stray keystroke there shouldn't change the tab behind a
+  // still-open modal. Modifier combos (Cmd/Ctrl/Alt+letter) are left alone
+  // for the browser/OS shortcuts they usually mean.
+  useEffect(() => {
+    const dialogOpen = addOpen || backportDialogOpen || taskDialogOpen || settingsOpen;
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (dialogOpen || isEditable(event.target)) return;
+      if (event.metaKey || event.ctrlKey || event.altKey) return;
+      if (event.key === 'p') navigate('/pulls');
+      else if (event.key === 'b') navigate('/backports');
+      else if (event.key === 't') navigate('/tasks');
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [addOpen, backportDialogOpen, taskDialogOpen, settingsOpen, navigate]);
 
   // Kept together so the timestamp can never drift from the error it dates.
   const reportTransportError = useCallback(
