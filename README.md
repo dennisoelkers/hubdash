@@ -22,7 +22,7 @@ Merged or closed PRs drop into a collapsed Archive section instead of cluttering
 
 <img width="3817" height="1856" alt="image" src="https://github.com/user-attachments/assets/05f0ed4e-4b77-4173-8027-6c6f20d7332b" />
 
-**Tasks tab** — track GitHub issues and pull requests as a single manually ordered list: drag a row to reorder it, and each one shows live status (waiting, needs action, ready, merged, or closed). Full GitHub URLs only — issues and PRs share one number sequence per repo, so `owner/repo#N` can't say which type it names. Finished rows go into a collapsed Archive section of their own.
+**Tasks tab** — track GitHub issues and pull requests as a single manually ordered list: drag a row to reorder it, and each one shows live status (waiting, needs action, ready, merged, or closed). Full GitHub URLs only — issues and PRs share one number sequence per repo, so `owner/repo#N` can't say which type it names. Archive a row you're done with and it moves into a collapsed Archive section of its own.
 
 Arrow keys move a selection around whichever tab is showing — the three columns on Pull Requests, the flat list on Backports and Tasks — and `a` archives whatever is selected. Manual archiving is new on Pull Requests and Tasks, joining the button Backports already had, and every tab's Archive button does the same thing as the key.
 
