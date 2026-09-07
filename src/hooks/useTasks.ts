@@ -17,9 +17,11 @@ export type UseTasksOptions = {
 
 export type UseTasksResult = {
   tasks: TrackedTask[];
+  archivedKeys: PrKey[];
   addTask: (parsed: ParsedTask) => { added: boolean; key: PrKey };
   removeTask: (key: PrKey) => void;
   reorderTasks: (fromIndex: number, toIndex: number) => void;
+  archiveTask: (key: PrKey) => void;
   storageError: string | null;
   dismissStorageError: () => void;
 };
@@ -29,32 +31,41 @@ function keyOf(task: TrackedTask | ParsedTask): PrKey {
 }
 
 /**
- * Owns the task list. Writes are explicit — every mutation saves — and the
- * hook never saves on mount, so an unreadable stored value is not
- * overwritten before the user has had a chance to see the warning about it.
- * Same discipline as useTrackedPrs and useBackportGroups.
+ * Owns the task list and, since this feature, the separate set of archived
+ * keys alongside it — see the plan's note on why `archived` is not a field
+ * on `TrackedTask` itself. Writes are explicit — every mutation saves both
+ * pieces together — and the hook never saves on mount, so an unreadable
+ * stored value is not overwritten before the user has had a chance to see
+ * the warning about it. Same discipline as useTrackedPrs and
+ * useBackportGroups.
  */
 export function useTasks(options: UseTasksOptions = {}): UseTasksResult {
   const { storage, clock } = options;
   const now = clock ?? defaultClock;
 
-  const initial = useRef<{ tasks: TrackedTask[]; error: string | null } | null>(null);
+  const initial = useRef<{
+    tasks: TrackedTask[];
+    archivedKeys: PrKey[];
+    error: string | null;
+  } | null>(null);
   if (initial.current === null) {
     initial.current = loadTasks(storage);
   }
 
   const [tasks, setTasks] = useState<TrackedTask[]>(initial.current.tasks);
+  const [archivedKeys, setArchivedKeys] = useState<PrKey[]>(initial.current.archivedKeys);
   const [storageError, setStorageError] = useState<string | null>(initial.current.error);
 
-  // Mirrors `tasks` so mutations can decide synchronously and return a
-  // verdict — the dialog needs this to flash a duplicate.
   const tasksRef = useRef<TrackedTask[]>(initial.current.tasks);
+  const archivedRef = useRef<PrKey[]>(initial.current.archivedKeys);
 
   const commit = useCallback(
-    (next: TrackedTask[]) => {
-      tasksRef.current = next;
-      saveTasks(next, storage);
-      setTasks(next);
+    (nextTasks: TrackedTask[], nextArchived: PrKey[]) => {
+      tasksRef.current = nextTasks;
+      archivedRef.current = nextArchived;
+      saveTasks(nextTasks, nextArchived, storage);
+      setTasks(nextTasks);
+      setArchivedKeys(nextArchived);
     },
     [storage],
   );
@@ -65,7 +76,7 @@ export function useTasks(options: UseTasksOptions = {}): UseTasksResult {
       if (tasksRef.current.some((task) => keyOf(task) === key)) {
         return { added: false, key };
       }
-      commit([...tasksRef.current, { ...parsed, addedAt: now() }]);
+      commit([...tasksRef.current, { ...parsed, addedAt: now() }], archivedRef.current);
       return { added: true, key };
     },
     [commit, now],
@@ -75,7 +86,8 @@ export function useTasks(options: UseTasksOptions = {}): UseTasksResult {
     (key: PrKey) => {
       const next = tasksRef.current.filter((task) => keyOf(task) !== key);
       if (next.length === tasksRef.current.length) return;
-      commit(next);
+      const nextArchived = archivedRef.current.filter((archivedKey) => archivedKey !== key);
+      commit(next, nextArchived);
     },
     [commit],
   );
@@ -96,12 +108,29 @@ export function useTasks(options: UseTasksOptions = {}): UseTasksResult {
       const [moved] = next.splice(fromIndex, 1);
       if (moved === undefined) return;
       next.splice(toIndex, 0, moved);
-      commit(next);
+      commit(next, archivedRef.current);
+    },
+    [commit],
+  );
+
+  const archiveTask = useCallback(
+    (key: PrKey) => {
+      if (archivedRef.current.includes(key)) return;
+      commit(tasksRef.current, [...archivedRef.current, key]);
     },
     [commit],
   );
 
   const dismissStorageError = useCallback(() => setStorageError(null), []);
 
-  return { tasks, addTask, removeTask, reorderTasks, storageError, dismissStorageError };
+  return {
+    tasks,
+    archivedKeys,
+    addTask,
+    removeTask,
+    reorderTasks,
+    archiveTask,
+    storageError,
+    dismissStorageError,
+  };
 }

@@ -38,8 +38,9 @@ describe('useTasks — add and remove', () => {
       { kind: 'pr', owner: 'Example', repo: 'example-server', number: 4821, addedAt: clock() },
     ]);
     expect(JSON.parse(storage.getItem(TASKS_KEY) ?? '')).toEqual({
-      version: 1,
+      version: 2,
       tasks: result.current.tasks,
+      archivedKeys: [],
     });
   });
 
@@ -136,5 +137,65 @@ describe('useTasks — corrupt storage', () => {
       result.current.dismissStorageError();
     });
     expect(result.current.storageError).toBeNull();
+  });
+});
+
+describe('useTasks — archiving', () => {
+  it('starts with no archived keys', () => {
+    const { result } = renderHook(() => useTasks({ storage: fakeStorage(), clock }));
+    expect(result.current.archivedKeys).toEqual([]);
+  });
+
+  it('archives a task and persists it', () => {
+    const storage = fakeStorage();
+    const { result } = renderHook(() => useTasks({ storage, clock }));
+    act(() => {
+      result.current.addTask({ kind: 'pr', owner: 'Example', repo: 'example-server', number: 4821 });
+    });
+    act(() => {
+      result.current.archiveTask('example/example-server#4821');
+    });
+    expect(result.current.archivedKeys).toEqual(['example/example-server#4821']);
+    expect(JSON.parse(storage.getItem(TASKS_KEY) ?? '').archivedKeys).toEqual([
+      'example/example-server#4821',
+    ]);
+  });
+
+  it('is a no-op to archive an already-archived key', () => {
+    const { result } = renderHook(() => useTasks({ storage: fakeStorage(), clock }));
+    act(() => {
+      result.current.addTask({ kind: 'pr', owner: 'Example', repo: 'example-server', number: 4821 });
+    });
+    act(() => {
+      result.current.archiveTask('example/example-server#4821');
+      result.current.archiveTask('example/example-server#4821');
+    });
+    expect(result.current.archivedKeys).toEqual(['example/example-server#4821']);
+  });
+
+  it('drops a stale archived key when the task is removed', () => {
+    const { result } = renderHook(() => useTasks({ storage: fakeStorage(), clock }));
+    act(() => {
+      result.current.addTask({ kind: 'pr', owner: 'Example', repo: 'example-server', number: 4821 });
+    });
+    act(() => {
+      result.current.archiveTask('example/example-server#4821');
+    });
+    act(() => {
+      result.current.removeTask('example/example-server#4821');
+    });
+    expect(result.current.archivedKeys).toEqual([]);
+  });
+
+  it('archiving does not change the tasks array or its order', () => {
+    const { result } = renderHook(() => useTasks({ storage: fakeStorage(), clock }));
+    act(() => {
+      result.current.addTask({ kind: 'pr', owner: 'a', repo: 'a', number: 1 });
+      result.current.addTask({ kind: 'pr', owner: 'a', repo: 'a', number: 2 });
+    });
+    act(() => {
+      result.current.archiveTask('a/a#1');
+    });
+    expect(result.current.tasks.map((task) => task.number)).toEqual([1, 2]);
   });
 });
