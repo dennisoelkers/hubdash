@@ -105,6 +105,10 @@ const Spacer = styled.span`
 
 const ArchiveButton = styled.button`
   padding: ${tokens.space(1)} ${tokens.space(2)};
+  /* Clears RemoveButton's absolutely-positioned corner footprint — see the
+     arithmetic in the Task 5 fix report. Without this, the two buttons'
+     bounding boxes overlap and a hover meant for Archive can reveal Remove. */
+  margin-right: ${tokens.space(6)};
   background: none;
   border: 1px solid ${tokens.color.border};
   border-radius: ${tokens.radius};
