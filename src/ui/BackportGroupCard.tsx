@@ -21,6 +21,7 @@ export type BackportGroupCardProps = {
    * PR flashes the existing card rather than creating a second one.
    */
   flashedKey?: PrKey | null;
+  selected?: boolean;
 };
 
 const Card = styled.article`
@@ -40,6 +41,10 @@ const Card = styled.article`
 
   &[data-flashed='true'] {
     outline: 2px solid ${tokens.color.accent};
+  }
+
+  &[data-selected='true'] {
+    background: ${tokens.color.accent}1a;
   }
 `;
 
@@ -150,6 +155,7 @@ export function BackportGroupCard({
   onFillSlot,
   onArchiveGroup,
   flashedKey = null,
+  selected = false,
 }: BackportGroupCardProps) {
   const [versionInput, setVersionInput] = useState('');
   const { landed, total } = rollUpFor(group, entries);
@@ -173,6 +179,7 @@ export function BackportGroupCard({
       data-testid="backport-group-card"
       data-complete={isComplete(group, entries) ? 'true' : 'false'}
       data-flashed={groupKey(group) === flashedKey ? 'true' : 'false'}
+      data-selected={selected ? 'true' : 'false'}
     >
       <Header>
         <NumberLink

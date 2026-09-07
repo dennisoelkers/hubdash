@@ -230,3 +230,15 @@ describe('BackportGroupCard — archiving', () => {
     expect(screen.queryByRole('button', { name: /^archive$/i })).not.toBeInTheDocument();
   });
 });
+
+describe('BackportGroupCard — selection', () => {
+  it('marks itself selected via data-selected', () => {
+    setup({ selected: true });
+    expect(screen.getByTestId('backport-group-card')).toHaveAttribute('data-selected', 'true');
+  });
+
+  it('is not selected by default', () => {
+    setup();
+    expect(screen.getByTestId('backport-group-card')).toHaveAttribute('data-selected', 'false');
+  });
+});
