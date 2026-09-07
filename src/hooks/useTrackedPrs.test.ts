@@ -145,3 +145,51 @@ describe('useTrackedPrs', () => {
     expect(storage.getItem(TRACKED_PRS_KEY)).toBe('not json{');
   });
 });
+
+describe('useTrackedPrs — manual archiving', () => {
+  it('starts with no archived keys', () => {
+    const { result } = setup();
+    expect(result.current.archivedKeys).toEqual([]);
+  });
+
+  it('archives a tracked PR and persists it', () => {
+    const storage = fakeStorage();
+    const { result } = renderHook(() => useTrackedPrs({ storage, clock }));
+    act(() => {
+      result.current.add({ owner: 'Example', repo: 'example-server', number: 4821 });
+    });
+    act(() => {
+      result.current.archivePr('example/example-server#4821');
+    });
+    expect(result.current.archivedKeys).toEqual(['example/example-server#4821']);
+    expect(JSON.parse(storage.getItem(TRACKED_PRS_KEY) ?? '').archivedKeys).toEqual([
+      'example/example-server#4821',
+    ]);
+  });
+
+  it('is a no-op to archive an already-archived key', () => {
+    const { result } = setup();
+    act(() => {
+      result.current.add({ owner: 'Example', repo: 'example-server', number: 4821 });
+    });
+    act(() => {
+      result.current.archivePr('example/example-server#4821');
+      result.current.archivePr('example/example-server#4821');
+    });
+    expect(result.current.archivedKeys).toEqual(['example/example-server#4821']);
+  });
+
+  it('drops a stale archived key when the PR is removed', () => {
+    const { result } = setup();
+    act(() => {
+      result.current.add({ owner: 'Example', repo: 'example-server', number: 4821 });
+    });
+    act(() => {
+      result.current.archivePr('example/example-server#4821');
+    });
+    act(() => {
+      result.current.remove('example/example-server#4821');
+    });
+    expect(result.current.archivedKeys).toEqual([]);
+  });
+});
