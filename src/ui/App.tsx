@@ -1,8 +1,10 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useLocation } from 'wouter';
-import { groupPrs } from '../domain/backports';
+import { groupKey, groupPrs, isComplete, orderGroups } from '../domain/backports';
 import { detectBackportVersions } from '../domain/detectBackportVersions';
 import { formatAgo } from '../domain/formatAgo';
+import type { BoardColumns } from '../domain/gridNav';
+import { moveSelection, positionOf } from '../domain/gridNav';
 import { prKey } from '../domain/prKey';
 import { groupIntoColumns } from '../domain/sort';
 import { fetchBoard, fetchPrBody } from '../github/client';
@@ -111,7 +113,15 @@ const EMPTY_COLUMNS: Record<ColumnId, PrEntry[]> = {
 export function App({ deps = {} }: { deps?: AppDeps } = {}) {
   const { fetchImpl, storage, clock, nowMs = defaultNowMs, validate } = deps;
 
-  const { prs, add, remove, storageError, dismissStorageError } = useTrackedPrs({ storage, clock });
+  const {
+    prs,
+    archivedKeys: boardArchivedKeys,
+    add,
+    remove,
+    archivePr,
+    storageError,
+    dismissStorageError,
+  } = useTrackedPrs({ storage, clock });
   const {
     groups,
     addGroup,
@@ -126,9 +136,11 @@ export function App({ deps = {} }: { deps?: AppDeps } = {}) {
 
   const {
     tasks,
+    archivedKeys: taskArchivedKeys,
     addTask,
     removeTask,
     reorderTasks,
+    archiveTask,
     storageError: taskStorageError,
     dismissStorageError: dismissTaskStorageError,
   } = useTasks({ storage, clock });
@@ -180,6 +192,12 @@ export function App({ deps = {} }: { deps?: AppDeps } = {}) {
   const [location, navigate] = useLocation();
   const activeTab: TabId =
     location === '/backports' ? 'backports' : location === '/tasks' ? 'tasks' : 'board';
+  // One selection, reset whenever the active tab changes — spec §3, and the
+  // user's explicit correction against remembering it per tab.
+  const [selectedKey, setSelectedKey] = useState<PrKey | null>(null);
+  useEffect(() => {
+    setSelectedKey(null);
+  }, [activeTab]);
   const [backportDialogOpen, setBackportDialogOpen] = useState(false);
   const [backportInitialUrl, setBackportInitialUrl] = useState<string | undefined>(undefined);
   const [taskDialogOpen, setTaskDialogOpen] = useState(false);
@@ -353,10 +371,148 @@ export function App({ deps = {} }: { deps?: AppDeps } = {}) {
   const columns = useMemo(() => {
     if (prs.length === 0) return EMPTY_COLUMNS;
     const tracked = new Set(prs.map((pr) => prKey(pr.owner, pr.repo, pr.number)));
-    return groupIntoColumns(entries.filter((entry) => tracked.has(entry.key)));
-  }, [entries, prs]);
+    return groupIntoColumns(
+      entries.filter((entry) => tracked.has(entry.key)),
+      new Set(boardArchivedKeys),
+    );
+  }, [entries, prs, boardArchivedKeys]);
 
   const entryMap = useMemo(() => new Map(entries.map((entry) => [entry.key, entry])), [entries]);
+
+  // What arrow keys move through on the Board — the three live columns only;
+  // archive is never reachable by keyboard (spec §2).
+  const boardColumnsForNav = useMemo<BoardColumns>(
+    () => ({
+      waiting: columns.waiting.map((entry) => entry.key),
+      needsAction: columns.needsAction.map((entry) => entry.key),
+      ready: columns.ready.map((entry) => entry.key),
+    }),
+    [columns],
+  );
+
+  // Same active-only, same order BackportsTab itself renders.
+  const activeGroupKeys = useMemo(
+    () =>
+      orderGroups(
+        groups.filter((group) => !group.archived),
+        entryMap,
+      ).map(groupKey),
+    [groups, entryMap],
+  );
+
+  // Same active-only, same (stored) order TasksTab itself renders.
+  const activeTaskKeys = useMemo(() => {
+    const archived = new Set(taskArchivedKeys);
+    return tasks
+      .filter((task) => !archived.has(prKey(task.owner, task.repo, task.number)))
+      .map((task) => prKey(task.owner, task.repo, task.number));
+  }, [tasks, taskArchivedKeys]);
+
+  // Arrow keys move the selection; `a` archives whatever is selected. Same
+  // suppression as p/b/t — never while typing, never while a dialog is open
+  // — which matters even more here, since arrow keys are the browser's
+  // native text-cursor-movement keys.
+  //
+  // Deliberately declared here rather than beside the p/b/t effect above: the
+  // dependency array is evaluated during render, so reading the three key
+  // lists (and `entryMap`) from up there would hit their temporal dead zone —
+  // the same trap `pollTargets` documents.
+  useEffect(() => {
+    const dialogOpen = addOpen || backportDialogOpen || taskDialogOpen || settingsOpen;
+
+    const moveFlatSelection = (keys: PrKey[], direction: 'up' | 'down') => {
+      if (keys.length === 0) {
+        setSelectedKey(null);
+        return;
+      }
+      const currentIndex = selectedKey === null ? -1 : keys.indexOf(selectedKey);
+      if (currentIndex === -1) {
+        setSelectedKey(keys[0] ?? null);
+        return;
+      }
+      const nextIndex = direction === 'up' ? currentIndex - 1 : currentIndex + 1;
+      if (nextIndex < 0 || nextIndex >= keys.length) return;
+      setSelectedKey(keys[nextIndex] ?? null);
+    };
+
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (dialogOpen || isEditable(event.target)) return;
+      if (event.metaKey || event.ctrlKey || event.altKey) return;
+
+      if (
+        event.key === 'ArrowUp' ||
+        event.key === 'ArrowDown' ||
+        event.key === 'ArrowLeft' ||
+        event.key === 'ArrowRight'
+      ) {
+        event.preventDefault();
+        if (activeTab === 'board') {
+          const direction =
+            event.key === 'ArrowUp'
+              ? 'up'
+              : event.key === 'ArrowDown'
+                ? 'down'
+                : event.key === 'ArrowLeft'
+                  ? 'left'
+                  : 'right';
+          const position = positionOf(boardColumnsForNav, selectedKey);
+          const next = moveSelection(boardColumnsForNav, position, direction);
+          setSelectedKey(
+            next === null ? null : (boardColumnsForNav[next.column][next.index] ?? null),
+          );
+          return;
+        }
+        // Backports and Tasks are flat lists — only up/down apply.
+        if (event.key !== 'ArrowUp' && event.key !== 'ArrowDown') return;
+        const direction = event.key === 'ArrowUp' ? 'up' : 'down';
+        moveFlatSelection(activeTab === 'backports' ? activeGroupKeys : activeTaskKeys, direction);
+        return;
+      }
+
+      if (event.key === 'a' && selectedKey !== null) {
+        const key = selectedKey;
+        if (activeTab === 'board') {
+          archivePr(key);
+          const position = positionOf(boardColumnsForNav, key);
+          if (position === null) {
+            setSelectedKey(null);
+          } else {
+            const column = boardColumnsForNav[position.column];
+            setSelectedKey(column[position.index + 1] ?? column[position.index - 1] ?? null);
+          }
+        } else if (activeTab === 'backports') {
+          const group = groups.find((candidate) => groupKey(candidate) === key);
+          if (group && !group.archived && isComplete(group, entryMap)) {
+            archiveGroup(key);
+            const index = activeGroupKeys.indexOf(key);
+            setSelectedKey(activeGroupKeys[index + 1] ?? activeGroupKeys[index - 1] ?? null);
+          }
+        } else {
+          archiveTask(key);
+          const index = activeTaskKeys.indexOf(key);
+          setSelectedKey(activeTaskKeys[index + 1] ?? activeTaskKeys[index - 1] ?? null);
+        }
+      }
+    };
+
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [
+    activeTab,
+    addOpen,
+    backportDialogOpen,
+    taskDialogOpen,
+    settingsOpen,
+    selectedKey,
+    boardColumnsForNav,
+    activeGroupKeys,
+    activeTaskKeys,
+    archivePr,
+    archiveGroup,
+    archiveTask,
+    groups,
+    entryMap,
+  ]);
 
   // Board/Backports keep reading `entries`/`entryMap` exactly as before — this
   // is Tasks' own view, mixing in pr-kind entries it tracks plus every
@@ -461,14 +617,16 @@ export function App({ deps = {} }: { deps?: AppDeps } = {}) {
             }
             boardCount={prs.length - columns.archive.length}
             backportsCount={groups.filter((group) => !group.archived).length}
-            tasksCount={tasks.length}
+            tasksCount={tasks.length - taskArchivedKeys.length}
           />
           {activeTab === 'board' ? (
             <BoardTab
               columns={columns}
               isEmpty={prs.length === 0}
               flashedKey={flashedKey}
+              selectedKey={selectedKey}
               onRemove={handleRemove}
+              onArchive={archivePr}
             />
           ) : activeTab === 'backports' ? (
             // `hasToken` is hardcoded because this whole branch is already
@@ -479,6 +637,7 @@ export function App({ deps = {} }: { deps?: AppDeps } = {}) {
               entries={entryMap}
               hasToken
               flashedKey={flashedKey}
+              selectedKey={selectedKey}
               onRemoveGroup={removeGroup}
               onAddVersion={addVersion}
               onRemoveVersion={removeVersion}
@@ -488,10 +647,26 @@ export function App({ deps = {} }: { deps?: AppDeps } = {}) {
           ) : (
             <TasksTab
               tasks={tasks}
+              archivedKeys={taskArchivedKeys}
               entries={taskEntryMap}
               flashedKey={flashedKey}
+              selectedKey={selectedKey}
               onRemoveTask={removeTask}
-              onReorder={reorderTasks}
+              onArchive={archiveTask}
+              onReorder={(fromActiveIndex, toActiveIndex) => {
+                // TasksTab's indices are over the active list it renders, but
+                // `reorderTasks` splices the full, unfiltered array.
+                const archived = new Set(taskArchivedKeys);
+                const activeTasks = tasks.filter(
+                  (task) => !archived.has(prKey(task.owner, task.repo, task.number)),
+                );
+                const fromTask = activeTasks[fromActiveIndex];
+                const toTask = activeTasks[toActiveIndex];
+                if (!fromTask || !toTask) return;
+                const fromIndex = tasks.indexOf(fromTask);
+                const toIndex = tasks.indexOf(toTask);
+                reorderTasks(fromIndex, toIndex);
+              }}
             />
           )}
         </>

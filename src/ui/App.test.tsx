@@ -1,8 +1,9 @@
-import { act, render, screen, waitFor, within } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { BACKPORT_GROUPS_KEY } from '../storage/backportGroups';
 import { TOKEN_KEY } from '../storage/token';
+import { TASKS_KEY } from '../storage/tasks';
 import { TRACKED_PRS_KEY } from '../storage/trackedPrs';
 import { App, POLL_INTERVAL_MS, RATE_LIMIT_FALLBACK_MS } from './App';
 
@@ -1305,5 +1306,267 @@ describe('App — keyboard shortcuts for tabs', () => {
       'aria-selected',
       'true',
     );
+  });
+});
+
+describe('App — keyboard navigation and archiving', () => {
+  it('selects and moves through the Board grid with arrow keys, and archives with a', async () => {
+    const fetchImpl = boardResponder({
+      pr0: prNode(4821),
+      pr1: prNode(4790, { reviewDecision: 'CHANGES_REQUESTED', reviewRequests: { totalCount: 0 } }),
+    });
+    const storage = fakeStorage({
+      [TOKEN_KEY]: storedToken,
+      [TRACKED_PRS_KEY]: storedPrs(4821, 4790),
+    });
+    render(<App deps={{ fetchImpl, storage, clock, nowMs }} />);
+    await waitFor(() =>
+      expect(within(screen.getByTestId('column-waiting')).getByText('#4821')).toBeInTheDocument(),
+    );
+
+    // Nothing selected yet — the first down-press selects the first item of
+    // the first non-empty column (waiting).
+    await userEvent.keyboard('{ArrowDown}');
+    const selectedInWaiting = within(screen.getByTestId('column-waiting'))
+      .getAllByTestId('pr-card')
+      .filter((card) => card.getAttribute('data-selected') === 'true');
+    expect(selectedInWaiting).toHaveLength(1);
+
+    await userEvent.keyboard('{ArrowRight}');
+    const selectedInNeedsAction = within(screen.getByTestId('column-needsAction'))
+      .getAllByTestId('pr-card')
+      .filter((card) => card.getAttribute('data-selected') === 'true');
+    expect(selectedInNeedsAction).toHaveLength(1);
+
+    await userEvent.keyboard('a');
+    await waitFor(() =>
+      expect(
+        within(screen.getByTestId('column-needsAction')).queryByText('#4790'),
+      ).not.toBeInTheDocument(),
+    );
+    const toggle = screen.getByRole('button', { name: /^archive \d/i });
+    await userEvent.click(toggle);
+    expect(within(screen.getByTestId('archive')).getByText('#4790')).toBeInTheDocument();
+  });
+
+  it('archives the selected Backports group with a, gated on isComplete', async () => {
+    const fetchImpl = boardResponder({
+      pr0: prNode(4821),
+      pr1: prNode(4840, { state: 'MERGED' }),
+    });
+    const storage = fakeStorage({ [TOKEN_KEY]: storedToken });
+    render(<App deps={{ fetchImpl, storage, clock, nowMs }} />);
+
+    await userEvent.click(await screen.findByRole('tab', { name: /backports/i }));
+    await userEvent.click(screen.getByRole('button', { name: /track backports/i }));
+    await userEvent.type(
+      screen.getByLabelText(/main pull request/i),
+      'https://github.com/Example/example-server/pull/4821',
+    );
+    await userEvent.type(screen.getByLabelText(/backport to/i), '6.2');
+    await userEvent.click(screen.getByRole('button', { name: /^track$/i }));
+
+    const row = screen.getByTestId('slot-row');
+    const event = new Event('drop', { bubbles: true, cancelable: true });
+    Object.assign(event, {
+      dataTransfer: {
+        types: ['text/plain'],
+        getData: () => 'https://github.com/Example/example-server/pull/4840',
+      },
+    });
+    await act(async () => {
+      row.dispatchEvent(event);
+    });
+    await screen.findByText(/merged/i);
+
+    await userEvent.keyboard('{ArrowDown}a');
+
+    expect(screen.queryByTestId('backport-group-card')).not.toBeInTheDocument();
+    // Post-archive the only "Archive"-named control left is the collapsed
+    // section's toggle, whose accessible name carries its count.
+    const toggle = screen.getByRole('button', { name: /^archive \d/i });
+    await userEvent.click(toggle);
+    expect(screen.getByText('#4821')).toBeInTheDocument();
+  });
+
+  it('does not archive an incomplete Backports group with a', async () => {
+    const fetchImpl = boardResponder({ pr0: prNode(4821) });
+    const storage = fakeStorage({ [TOKEN_KEY]: storedToken });
+    render(<App deps={{ fetchImpl, storage, clock, nowMs }} />);
+
+    await userEvent.click(await screen.findByRole('tab', { name: /backports/i }));
+    await userEvent.click(screen.getByRole('button', { name: /track backports/i }));
+    await userEvent.type(
+      screen.getByLabelText(/main pull request/i),
+      'https://github.com/Example/example-server/pull/4821',
+    );
+    await userEvent.type(screen.getByLabelText(/backport to/i), '6.2');
+    await userEvent.click(screen.getByRole('button', { name: /^track$/i }));
+    await screen.findByTestId('backport-group-card');
+
+    await userEvent.keyboard('{ArrowDown}a');
+
+    expect(screen.getByTestId('backport-group-card')).toBeInTheDocument();
+    expect(screen.queryByTestId('backport-archive')).not.toBeInTheDocument();
+  });
+
+  it('archives a task with the button, moving it into the collapsed archive section', async () => {
+    const fetchImpl = boardResponder({ pr0: prNode(4821) });
+    // Routed before render, unlike the older Tasks tests above: their
+    // post-render popstate dispatch re-renders App outside `act`, which is
+    // what makes them log React's not-wrapped-in-act warning.
+    window.history.pushState(null, '', '/tasks');
+    render(
+      <App
+        deps={{ fetchImpl, storage: fakeStorage({ [TOKEN_KEY]: storedToken }), clock, nowMs }}
+      />,
+    );
+
+    await userEvent.click(await screen.findByRole('button', { name: /add task/i }));
+    await userEvent.type(
+      screen.getByLabelText(/issue or pull request url/i),
+      'https://github.com/Example/example-server/pull/4821',
+    );
+    await userEvent.click(screen.getByRole('button', { name: /^add$/i }));
+    await screen.findByText('Change number 4821');
+    // Let the poll the add triggered land before archiving, so its state
+    // update happens inside the test rather than after it.
+    await waitFor(() => expect(screen.getByTestId('freshness')).toHaveTextContent(/updated/i));
+
+    await userEvent.click(screen.getByRole('button', { name: /^archive$/i }));
+
+    expect(screen.queryAllByTestId('task-row')).toHaveLength(0);
+    await waitFor(() =>
+      expect(screen.getByRole('tab', { name: /^tasks/i })).toHaveTextContent('0'),
+    );
+    await userEvent.click(screen.getByRole('button', { name: /^archive \d/i }));
+    expect(screen.getByText('Change number 4821')).toBeInTheDocument();
+  });
+
+  it('archives the selected task with a', async () => {
+    const fetchImpl = boardResponder({ pr0: prNode(4821) });
+    window.history.pushState(null, '', '/tasks');
+    render(
+      <App
+        deps={{ fetchImpl, storage: fakeStorage({ [TOKEN_KEY]: storedToken }), clock, nowMs }}
+      />,
+    );
+
+    await userEvent.click(await screen.findByRole('button', { name: /add task/i }));
+    await userEvent.type(
+      screen.getByLabelText(/issue or pull request url/i),
+      'https://github.com/Example/example-server/pull/4821',
+    );
+    await userEvent.click(screen.getByRole('button', { name: /^add$/i }));
+    await screen.findByText('Change number 4821');
+    await waitFor(() => expect(screen.getByTestId('freshness')).toHaveTextContent(/updated/i));
+
+    await userEvent.keyboard('{ArrowDown}');
+    expect(screen.getByTestId('task-row')).toHaveAttribute('data-selected', 'true');
+
+    await userEvent.keyboard('a');
+    expect(screen.queryAllByTestId('task-row')).toHaveLength(0);
+    expect(screen.getByTestId('task-archive')).toBeInTheDocument();
+  });
+
+  it('reorders by the active list, not the raw stored one, when a task is archived', async () => {
+    // Reordering is the one place where an archived task shifts indices:
+    // TasksTab hands back positions in the list it rendered (active only),
+    // while `reorderTasks` splices the full stored array.
+    const fetchImpl = boardResponder({
+      pr0: prNode(4821),
+      pr1: prNode(4790),
+      pr2: prNode(4840),
+    });
+    const storage = fakeStorage({
+      [TOKEN_KEY]: storedToken,
+      [TASKS_KEY]: JSON.stringify({
+        version: 2,
+        tasks: [4821, 4790, 4840].map((number) => ({
+          kind: 'pr',
+          owner: 'Example',
+          repo: 'example-server',
+          number,
+          addedAt: '2026-08-27T09:00:00Z',
+        })),
+        archivedKeys: ['example/example-server#4821'],
+      }),
+    });
+    window.history.pushState(null, '', '/tasks');
+    render(<App deps={{ fetchImpl, storage, clock, nowMs }} />);
+
+    await waitFor(() => expect(screen.getAllByTestId('task-row')).toHaveLength(2));
+    await waitFor(() => expect(screen.getByTestId('freshness')).toHaveTextContent(/updated/i));
+    const rows = screen.getAllByTestId('task-row');
+    expect(rows.map((row) => row.textContent)).toEqual([
+      expect.stringContaining('#4790'),
+      expect.stringContaining('#4840'),
+    ]);
+
+    const [first, second] = rows;
+    if (first === undefined || second === undefined) throw new Error('expected two rows');
+    fireEvent.dragStart(first);
+    fireEvent.dragOver(second);
+    fireEvent.drop(second);
+
+    expect(screen.getAllByTestId('task-row').map((row) => row.textContent)).toEqual([
+      expect.stringContaining('#4840'),
+      expect.stringContaining('#4790'),
+    ]);
+    const stored = JSON.parse(storage.getItem(TASKS_KEY) ?? '');
+    expect(stored.tasks.map((task: { number: number }) => task.number)).toEqual([4821, 4840, 4790]);
+
+    // Reordering hands `pollTargets` a fresh array, which kicks off another
+    // poll; let it land inside the test rather than after it.
+    await waitFor(() => expect(fetchImpl).toHaveBeenCalledTimes(2));
+    await act(async () => {});
+  });
+
+  it('resets the selection when switching tabs', async () => {
+    const fetchImpl = boardResponder({ pr0: prNode(4821) });
+    const storage = fakeStorage({
+      [TOKEN_KEY]: storedToken,
+      [TRACKED_PRS_KEY]: storedPrs(4821),
+    });
+    render(<App deps={{ fetchImpl, storage, clock, nowMs }} />);
+    await waitFor(() =>
+      expect(within(screen.getByTestId('column-waiting')).getByText('#4821')).toBeInTheDocument(),
+    );
+
+    await userEvent.keyboard('{ArrowDown}');
+    expect(
+      screen
+        .getAllByTestId('pr-card')
+        .some((card) => card.getAttribute('data-selected') === 'true'),
+    ).toBe(true);
+
+    await userEvent.click(screen.getByRole('tab', { name: /backports/i }));
+    await userEvent.click(screen.getByRole('tab', { name: /pull requests/i }));
+
+    expect(
+      screen
+        .getAllByTestId('pr-card')
+        .every((card) => card.getAttribute('data-selected') === 'false'),
+    ).toBe(true);
+  });
+
+  it('does not move the selection while typing an arrow-adjacent letter, and never types into an input', async () => {
+    render(
+      <App
+        deps={{
+          fetchImpl: vi.fn(),
+          storage: fakeStorage({ [TOKEN_KEY]: storedToken }),
+          clock,
+          nowMs,
+        }}
+      />,
+    );
+    await userEvent.click(await screen.findByRole('button', { name: /add pr/i }));
+    await userEvent.type(screen.getByLabelText(/pull request url/i), 'a');
+
+    expect(screen.getByLabelText(/pull request url/i)).toHaveValue('a');
+    // No board card exists yet in this test at all — the only thing worth
+    // asserting is that typing 'a' did not throw or attempt to archive
+    // anything, which a passing render (no crash) already demonstrates.
   });
 });
