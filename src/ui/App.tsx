@@ -469,27 +469,54 @@ export function App({ deps = {} }: { deps?: AppDeps } = {}) {
         return;
       }
 
+      // Two things worth knowing about this branch.
+      //
+      // First, every branch re-checks that the selection still names something
+      // in its *own* active/selectable set before archiving. `selectedKey` is
+      // not cleared when the selected item leaves that set behind the user's
+      // back — its own Remove button doesn't clear it, and on the Board a poll
+      // can move an open PR into Archive on its own — so archiving blind here
+      // would write a permanent dangling key into `archivedKeys` (archiving is
+      // one-way) and the index arithmetic below would silently wrap `-1 + 1`
+      // back to the top of the list. A stale selection just clears instead.
+      //
+      // Second, the three key lists read below (`boardColumnsForNav`,
+      // `activeGroupKeys`, `activeTaskKeys`) are still the *pre*-archive
+      // snapshot at the point this handler runs — the archive call's state
+      // update only lands on the next render. That is exactly what makes
+      // `list[index + 1]` the item that will occupy `index` after that
+      // re-render, so repeated up/`a` presses walk down the list. Reading
+      // "fresher" post-archive state here would be a regression, not an
+      // improvement.
       if (event.key === 'a' && selectedKey !== null) {
         const key = selectedKey;
         if (activeTab === 'board') {
-          archivePr(key);
           const position = positionOf(boardColumnsForNav, key);
           if (position === null) {
             setSelectedKey(null);
-          } else {
-            const column = boardColumnsForNav[position.column];
-            setSelectedKey(column[position.index + 1] ?? column[position.index - 1] ?? null);
+            return;
           }
+          archivePr(key);
+          const column = boardColumnsForNav[position.column];
+          setSelectedKey(column[position.index + 1] ?? column[position.index - 1] ?? null);
         } else if (activeTab === 'backports') {
           const group = groups.find((candidate) => groupKey(candidate) === key);
-          if (group && !group.archived && isComplete(group, entryMap)) {
+          if (group === undefined) {
+            setSelectedKey(null);
+            return;
+          }
+          if (!group.archived && isComplete(group, entryMap)) {
             archiveGroup(key);
             const index = activeGroupKeys.indexOf(key);
             setSelectedKey(activeGroupKeys[index + 1] ?? activeGroupKeys[index - 1] ?? null);
           }
         } else {
-          archiveTask(key);
           const index = activeTaskKeys.indexOf(key);
+          if (index === -1) {
+            setSelectedKey(null);
+            return;
+          }
+          archiveTask(key);
           setSelectedKey(activeTaskKeys[index + 1] ?? activeTaskKeys[index - 1] ?? null);
         }
       }
@@ -617,7 +644,7 @@ export function App({ deps = {} }: { deps?: AppDeps } = {}) {
             }
             boardCount={prs.length - columns.archive.length}
             backportsCount={groups.filter((group) => !group.archived).length}
-            tasksCount={tasks.length - taskArchivedKeys.length}
+            tasksCount={activeTaskKeys.length}
           />
           {activeTab === 'board' ? (
             <BoardTab

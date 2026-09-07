@@ -1349,6 +1349,40 @@ describe('App — keyboard navigation and archiving', () => {
     expect(within(screen.getByTestId('archive')).getByText('#4790')).toBeInTheDocument();
   });
 
+  it('advances the selection to the next card after archiving with a', async () => {
+    // Both PRs are plain defaults, so both land in Waiting, and their equal
+    // `updatedAt` leaves them in tracked order — #4821 first, #4790 second.
+    const fetchImpl = boardResponder({ pr0: prNode(4821), pr1: prNode(4790) });
+    const storage = fakeStorage({
+      [TOKEN_KEY]: storedToken,
+      [TRACKED_PRS_KEY]: storedPrs(4821, 4790),
+    });
+    render(<App deps={{ fetchImpl, storage, clock, nowMs }} />);
+    await waitFor(() =>
+      expect(within(screen.getByTestId('column-waiting')).getAllByTestId('pr-card')).toHaveLength(
+        2,
+      ),
+    );
+
+    // Selects the first card of the first non-empty column: #4821.
+    await userEvent.keyboard('{ArrowDown}');
+    const [firstCard] = within(screen.getByTestId('column-waiting')).getAllByTestId('pr-card');
+    expect(firstCard).toHaveAttribute('data-selected', 'true');
+    expect(firstCard).toHaveTextContent('#4821');
+
+    // Archiving must not clear the selection — it hands it to whatever now
+    // occupies that position, so repeated `a` presses archive down the column.
+    await userEvent.keyboard('a');
+    await waitFor(() =>
+      expect(within(screen.getByTestId('column-waiting')).getAllByTestId('pr-card')).toHaveLength(
+        1,
+      ),
+    );
+    const remaining = within(screen.getByTestId('column-waiting')).getByTestId('pr-card');
+    expect(remaining).toHaveTextContent('#4790');
+    expect(remaining).toHaveAttribute('data-selected', 'true');
+  });
+
   it('archives the selected Backports group with a, gated on isComplete', async () => {
     const fetchImpl = boardResponder({
       pr0: prNode(4821),
