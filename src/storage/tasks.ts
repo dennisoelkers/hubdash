@@ -1,12 +1,12 @@
-import type { TaskKind, TrackedTask } from '../types';
+import type { PrKey, TaskKind, TrackedTask } from '../types';
 import { readKey, writeKey } from './localStorage';
 
 export const TASKS_KEY = 'hubdash.tasks';
 export const CORRUPT_TASKS_KEY = 'hubdash.tasks.corrupt';
 
-const VERSION = 1;
+const CURRENT_VERSION = 2;
 
-export type LoadTasksResult = { tasks: TrackedTask[]; error: string | null };
+export type LoadTasksResult = { tasks: TrackedTask[]; archivedKeys: PrKey[]; error: string | null };
 
 const UNREADABLE = 'Your tasks could not be read and were reset.';
 
@@ -31,15 +31,19 @@ export function isTrackedTask(value: unknown): value is TrackedTask {
   );
 }
 
+function isPrKeyArray(value: unknown): value is PrKey[] {
+  return Array.isArray(value) && value.every((item) => typeof item === 'string');
+}
+
 function reject(storage: Storage | null | undefined, raw: string, error: string): LoadTasksResult {
   // Keep the unusable value so a later save cannot destroy the user's list.
   writeKey(storage, CORRUPT_TASKS_KEY, raw);
-  return { tasks: [], error };
+  return { tasks: [], archivedKeys: [], error };
 }
 
 export function loadTasks(storage?: Storage | null): LoadTasksResult {
   const raw = readKey(storage, TASKS_KEY);
-  if (raw === null) return { tasks: [], error: null };
+  if (raw === null) return { tasks: [], archivedKeys: [], error: null };
 
   let parsed: unknown;
   try {
@@ -53,20 +57,40 @@ export function loadTasks(storage?: Storage | null): LoadTasksResult {
   }
 
   const envelope = parsed as Record<string, unknown>;
-  // A missing `version` is a wrong envelope, not a future one.
   if (!('version' in envelope)) {
     return reject(storage, raw, UNREADABLE);
   }
-  if (envelope.version !== VERSION) {
+
+  // A version-1 payload predates archiving on this tab entirely — nothing it
+  // names was ever archived.
+  if (envelope.version === 1) {
+    if (!Array.isArray(envelope.tasks) || !envelope.tasks.every(isTrackedTask)) {
+      return reject(storage, raw, UNREADABLE);
+    }
+    return { tasks: envelope.tasks, archivedKeys: [], error: null };
+  }
+
+  if (envelope.version !== CURRENT_VERSION) {
     return reject(storage, raw, 'Your tasks use an unsupported version and were reset.');
   }
   if (!Array.isArray(envelope.tasks) || !envelope.tasks.every(isTrackedTask)) {
     return reject(storage, raw, UNREADABLE);
   }
+  if (!isPrKeyArray(envelope.archivedKeys)) {
+    return reject(storage, raw, UNREADABLE);
+  }
 
-  return { tasks: envelope.tasks, error: null };
+  return { tasks: envelope.tasks, archivedKeys: envelope.archivedKeys, error: null };
 }
 
-export function saveTasks(tasks: TrackedTask[], storage?: Storage | null): void {
-  writeKey(storage, TASKS_KEY, JSON.stringify({ version: VERSION, tasks }));
+export function saveTasks(
+  tasks: TrackedTask[],
+  archivedKeys: PrKey[],
+  storage?: Storage | null,
+): void {
+  writeKey(
+    storage,
+    TASKS_KEY,
+    JSON.stringify({ version: CURRENT_VERSION, tasks, archivedKeys }),
+  );
 }

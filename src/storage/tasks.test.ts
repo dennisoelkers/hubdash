@@ -64,11 +64,11 @@ describe('isTrackedTask', () => {
 });
 
 describe('loadTasks', () => {
-  it('returns an empty list when nothing is stored', () => {
-    expect(loadTasks(fakeStorage())).toEqual({ tasks: [], error: null });
+  it('returns an empty list and no archived keys when nothing is stored', () => {
+    expect(loadTasks(fakeStorage())).toEqual({ tasks: [], archivedKeys: [], error: null });
   });
 
-  it('loads a previously saved list', () => {
+  it('loads a version-1 payload, defaulting archivedKeys to empty', () => {
     const storage = fakeStorage({
       [TASKS_KEY]: JSON.stringify({
         version: 1,
@@ -77,6 +77,7 @@ describe('loadTasks', () => {
     });
     expect(loadTasks(storage)).toEqual({
       tasks: [{ kind: 'pr', owner: 'a', repo: 'b', number: 1, addedAt: '2026-08-27T09:00:00Z' }],
+      archivedKeys: [],
       error: null,
     });
   });
@@ -119,11 +120,36 @@ describe('saveTasks', () => {
     const storage = fakeStorage();
     saveTasks(
       [{ kind: 'issue', owner: 'a', repo: 'b', number: 2, addedAt: '2026-08-27T09:00:00Z' }],
+      [],
       storage,
     );
     expect(loadTasks(storage)).toEqual({
       tasks: [{ kind: 'issue', owner: 'a', repo: 'b', number: 2, addedAt: '2026-08-27T09:00:00Z' }],
+      archivedKeys: [],
       error: null,
     });
+  });
+});
+
+describe('loadTasks — archived keys', () => {
+  it('round-trips archived keys alongside the tasks', () => {
+    const storage = fakeStorage();
+    saveTasks(
+      [{ kind: 'pr', owner: 'a', repo: 'b', number: 1, addedAt: '2026-08-27T09:00:00Z' }],
+      ['a/b#1'],
+      storage,
+    );
+    expect(loadTasks(storage)).toEqual({
+      tasks: [{ kind: 'pr', owner: 'a', repo: 'b', number: 1, addedAt: '2026-08-27T09:00:00Z' }],
+      archivedKeys: ['a/b#1'],
+      error: null,
+    });
+  });
+
+  it('rejects a version-2 payload whose archivedKeys is not a string array', () => {
+    const raw = JSON.stringify({ version: 2, tasks: [], archivedKeys: [1] });
+    const result = loadTasks(fakeStorage({ [TASKS_KEY]: raw }));
+    expect(result.tasks).toEqual([]);
+    expect(result.error).toBeTruthy();
   });
 });
