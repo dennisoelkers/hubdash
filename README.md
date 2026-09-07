@@ -14,7 +14,7 @@ There's no server. hubdash is a static single-page app that talks directly to th
 - **Needs action** — failing CI, changes requested, or merge conflicts
 - **Ready** — approved and green
 
-Merged or closed PRs drop into a collapsed Archive section instead of cluttering the board.
+Merged or closed PRs drop into a collapsed Archive section instead of cluttering the board — and each card now carries an Archive button too, for an open PR you've stopped caring about.
 
 <img width="3840" height="1845" alt="image" src="https://github.com/user-attachments/assets/d1e66ec1-7d32-485f-88f6-70099bf32a89" />
 
@@ -22,7 +22,9 @@ Merged or closed PRs drop into a collapsed Archive section instead of cluttering
 
 <img width="3817" height="1856" alt="image" src="https://github.com/user-attachments/assets/05f0ed4e-4b77-4173-8027-6c6f20d7332b" />
 
-**Tasks tab** — track GitHub issues and pull requests as a single manually ordered list: drag a row to reorder it, and each one shows live status (waiting, needs action, ready, merged, or closed). Full GitHub URLs only — issues and PRs share one number sequence per repo, so `owner/repo#N` can't say which type it names.
+**Tasks tab** — track GitHub issues and pull requests as a single manually ordered list: drag a row to reorder it, and each one shows live status (waiting, needs action, ready, merged, or closed). Full GitHub URLs only — issues and PRs share one number sequence per repo, so `owner/repo#N` can't say which type it names. Finished rows go into a collapsed Archive section of their own.
+
+Arrow keys move a selection around whichever tab is showing — the three columns on Pull Requests, the flat list on Backports and Tasks — and `a` archives whatever is selected. Manual archiving is new on Pull Requests and Tasks, joining the button Backports already had, and every tab's Archive button does the same thing as the key.
 
 All three tabs poll GitHub every 15 seconds, share one request per unique item (so something tracked on more than one tab only costs one query), and are reachable at their own URLs (`/pulls`, `/backports`, `/tasks`) — bookmarkable, shareable, and wired up to the browser's back/forward buttons.
 
