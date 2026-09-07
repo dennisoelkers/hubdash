@@ -85,3 +85,29 @@ describe('groupIntoColumns', () => {
     expect(numbersIn(columns.needsAction)).toEqual([99, 1, 2]);
   });
 });
+
+describe('groupIntoColumns — manually archived PRs', () => {
+  it('sends a manually-archived, still-open PR to archive ahead of classify()', () => {
+    const entry = ok({ number: 1 }); // open, unreviewed — classify() would say waiting
+    const columns = groupIntoColumns([entry], new Set([entry.key]));
+    expect(numbersIn(columns.archive)).toEqual([1]);
+    expect(numbersIn(columns.waiting)).toEqual([]);
+  });
+
+  it('keeps an archived PR in archive even if it later errors', () => {
+    const entry = errored(1);
+    const columns = groupIntoColumns([entry], new Set([entry.key]));
+    expect(numbersIn(columns.archive)).toEqual([1]);
+    expect(numbersIn(columns.needsAction)).toEqual([]);
+  });
+
+  it('does not affect a PR that was not manually archived', () => {
+    const columns = groupIntoColumns([ok({ number: 1 })], new Set(['example/example-server#999']));
+    expect(numbersIn(columns.waiting)).toEqual([1]);
+  });
+
+  it('leaves merged/closed PRs archived exactly as before, with no set at all', () => {
+    const columns = groupIntoColumns([ok({ number: 1, lifecycle: 'MERGED' })]);
+    expect(numbersIn(columns.archive)).toEqual([1]);
+  });
+});

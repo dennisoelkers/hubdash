@@ -1,4 +1,4 @@
-import type { ColumnId, PrEntry } from '../types';
+import type { ColumnId, PrEntry, PrKey } from '../types';
 import { classify } from './classify';
 
 /**
@@ -28,11 +28,18 @@ function byRankThenRecency(a: PrEntry, b: PrEntry): number {
 }
 
 /**
- * Groups every entry into its column and orders each column, per spec §7.3.
- * An entry that failed to resolve goes to needs action, since removing it or
- * fixing access is the user's call.
+ * Groups every entry into its column and orders each column, per spec §7.3
+ * (v1) and the manual-archiving spec §4. `archivedKeys` — a manually
+ * archived PR (this feature) — is checked first, ahead of even the error
+ * branch: a user's decision to archive something should not be overridden
+ * by a later transient poll failure on it. An entry that failed to resolve
+ * goes to needs action otherwise, since removing it or fixing access is the
+ * user's call.
  */
-export function groupIntoColumns(entries: PrEntry[]): Record<ColumnId, PrEntry[]> {
+export function groupIntoColumns(
+  entries: PrEntry[],
+  archivedKeys: Set<PrKey> = new Set(),
+): Record<ColumnId, PrEntry[]> {
   const columns: Record<ColumnId, PrEntry[]> = {
     waiting: [],
     needsAction: [],
@@ -41,7 +48,11 @@ export function groupIntoColumns(entries: PrEntry[]): Record<ColumnId, PrEntry[]
   };
 
   for (const entry of entries) {
-    const column = entry.status === 'error' ? 'needsAction' : classify(entry.pr);
+    const column = archivedKeys.has(entry.key)
+      ? 'archive'
+      : entry.status === 'error'
+        ? 'needsAction'
+        : classify(entry.pr);
     columns[column].push(entry);
   }
 
