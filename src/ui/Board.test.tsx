@@ -24,7 +24,7 @@ function emptyColumns(): Record<ColumnId, PrEntry[]> {
 
 describe('Board', () => {
   it('renders all three columns with their titles', () => {
-    render(<Board columns={emptyColumns()} onRemove={() => {}} />);
+    render(<Board columns={emptyColumns()} onRemove={() => {}} onArchive={() => {}} />);
     expect(screen.getByRole('heading', { name: /waiting/i })).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: /needs action/i })).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: /ready/i })).toBeInTheDocument();
@@ -36,7 +36,7 @@ describe('Board', () => {
       entry({ number: 2 }),
       entry({ number: 3, ci: 'failure' }),
     ]);
-    render(<Board columns={columns} onRemove={() => {}} />);
+    render(<Board columns={columns} onRemove={() => {}} onArchive={() => {}} />);
     expect(
       within(screen.getByTestId('column-waiting')).getByTestId('column-count'),
     ).toHaveTextContent('2');
@@ -51,14 +51,14 @@ describe('Board', () => {
       entry({ number: 2, ci: 'failure' }),
       entry({ number: 3, reviewDecision: 'APPROVED' }),
     ]);
-    render(<Board columns={columns} onRemove={() => {}} />);
+    render(<Board columns={columns} onRemove={() => {}} onArchive={() => {}} />);
     expect(within(screen.getByTestId('column-waiting')).getByText('#1')).toBeInTheDocument();
     expect(within(screen.getByTestId('column-needsAction')).getByText('#2')).toBeInTheDocument();
     expect(within(screen.getByTestId('column-ready')).getByText('#3')).toBeInTheDocument();
   });
 
   it('shows an empty-state message in an empty column', () => {
-    render(<Board columns={emptyColumns()} onRemove={() => {}} />);
+    render(<Board columns={emptyColumns()} onRemove={() => {}} onArchive={() => {}} />);
     expect(
       within(screen.getByTestId('column-ready')).getByText(/nothing here/i),
     ).toBeInTheDocument();
@@ -69,7 +69,7 @@ describe('Board', () => {
       entry({ number: 1, ci: 'failure' }),
       entry({ number: 2, isDraft: true }),
     ]);
-    render(<Board columns={columns} onRemove={() => {}} />);
+    render(<Board columns={columns} onRemove={() => {}} onArchive={() => {}} />);
     expect(
       within(screen.getByTestId('column-needsAction')).getByTestId('draft-divider'),
     ).toBeInTheDocument();
@@ -77,7 +77,7 @@ describe('Board', () => {
 
   it('draws no divider when needs action has no drafts', () => {
     const columns = groupIntoColumns([entry({ number: 1, ci: 'failure' })]);
-    render(<Board columns={columns} onRemove={() => {}} />);
+    render(<Board columns={columns} onRemove={() => {}} onArchive={() => {}} />);
     expect(screen.queryByTestId('draft-divider')).not.toBeInTheDocument();
   });
 
@@ -90,7 +90,7 @@ describe('Board', () => {
       entry({ number: 1, isDraft: true }),
       entry({ number: 2, isDraft: true }),
     ]);
-    render(<Board columns={columns} onRemove={() => {}} />);
+    render(<Board columns={columns} onRemove={() => {}} onArchive={() => {}} />);
     expect(within(screen.getByTestId('column-needsAction')).getAllByTestId('pr-card')).toHaveLength(
       2,
     );
@@ -100,14 +100,21 @@ describe('Board', () => {
   it('passes the remove callback through to cards', async () => {
     const onRemove = vi.fn();
     const columns = groupIntoColumns([entry({ number: 4821 })]);
-    render(<Board columns={columns} onRemove={onRemove} />);
+    render(<Board columns={columns} onRemove={onRemove} onArchive={() => {}} />);
     await userEvent.click(screen.getByRole('button', { name: /remove #4821/i }));
     expect(onRemove).toHaveBeenCalledWith('example/example-server#4821');
   });
 
   it('flashes only the card whose key matches', () => {
     const columns = groupIntoColumns([entry({ number: 1 }), entry({ number: 2 })]);
-    render(<Board columns={columns} onRemove={() => {}} flashedKey="example/example-server#2" />);
+    render(
+      <Board
+        columns={columns}
+        onRemove={() => {}}
+        onArchive={() => {}}
+        flashedKey="example/example-server#2"
+      />,
+    );
     const flashed = screen
       .getAllByTestId('pr-card')
       .filter((card) => card.getAttribute('data-flashed') === 'true');
@@ -121,7 +128,7 @@ describe('Board', () => {
 describe('ArchiveSection via Board', () => {
   it('starts collapsed, showing a count but no cards', () => {
     const columns = groupIntoColumns([entry({ number: 9, lifecycle: 'MERGED' })]);
-    render(<Board columns={columns} onRemove={() => {}} />);
+    render(<Board columns={columns} onRemove={() => {}} onArchive={() => {}} />);
     expect(screen.getByRole('button', { name: /archive/i })).toHaveAttribute(
       'aria-expanded',
       'false',
@@ -132,7 +139,7 @@ describe('ArchiveSection via Board', () => {
 
   it('reveals its cards when expanded, and hides them again', async () => {
     const columns = groupIntoColumns([entry({ number: 9, lifecycle: 'MERGED' })]);
-    render(<Board columns={columns} onRemove={() => {}} />);
+    render(<Board columns={columns} onRemove={() => {}} onArchive={() => {}} />);
     const toggle = screen.getByRole('button', { name: /archive/i });
 
     await userEvent.click(toggle);
@@ -144,7 +151,45 @@ describe('ArchiveSection via Board', () => {
   });
 
   it('is not rendered at all when nothing is archived', () => {
-    render(<Board columns={emptyColumns()} onRemove={() => {}} />);
+    render(<Board columns={emptyColumns()} onRemove={() => {}} onArchive={() => {}} />);
     expect(screen.queryByRole('button', { name: /archive/i })).not.toBeInTheDocument();
+  });
+});
+
+describe('Board — archiving and selection', () => {
+  it('passes the archive callback through to cards, hidden inside the archive section', async () => {
+    const onArchive = vi.fn();
+    const columns = groupIntoColumns([entry({ number: 4821 })]);
+    render(<Board columns={columns} onRemove={() => {}} onArchive={onArchive} />);
+    await userEvent.click(screen.getByRole('button', { name: /^archive$/i }));
+    expect(onArchive).toHaveBeenCalledWith('example/example-server#4821');
+  });
+
+  it('selects only the card whose key matches', () => {
+    const columns = groupIntoColumns([entry({ number: 1 }), entry({ number: 2 })]);
+    render(
+      <Board
+        columns={columns}
+        onRemove={() => {}}
+        onArchive={() => {}}
+        selectedKey="example/example-server#2"
+      />,
+    );
+    const selected = screen
+      .getAllByTestId('pr-card')
+      .filter((card) => card.getAttribute('data-selected') === 'true');
+    expect(selected).toHaveLength(1);
+    const [selectedCard] = selected;
+    if (!selectedCard) throw new Error('expected exactly one selected card');
+    expect(within(selectedCard).getByText('#2')).toBeInTheDocument();
+  });
+
+  it('never renders an Archive button inside the collapsed-then-expanded archive section', async () => {
+    const columns = groupIntoColumns([entry({ number: 9, lifecycle: 'MERGED' })]);
+    render(<Board columns={columns} onRemove={() => {}} onArchive={() => {}} />);
+    await userEvent.click(screen.getByRole('button', { name: /archive/i }));
+    // The toggle itself is named "Archive N"; a per-card Archive button would
+    // collide with an exact-match query, which is exactly what this guards.
+    expect(screen.queryAllByRole('button', { name: /^archive$/i })).toHaveLength(0);
   });
 });

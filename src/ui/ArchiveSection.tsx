@@ -7,6 +7,7 @@ import { tokens } from './theme';
 export type ArchiveSectionProps = {
   entries: PrEntry[];
   onRemove: (key: PrKey) => void;
+  onArchive: (key: PrKey) => void;
 };
 
 const Wrapper = styled.section`
@@ -42,7 +43,7 @@ const Cards = styled.div`
 `;
 
 /** Collapsed by default. The state is per-session by design — see Task 11 note. */
-export function ArchiveSection({ entries, onRemove }: ArchiveSectionProps) {
+export function ArchiveSection({ entries, onRemove, onArchive }: ArchiveSectionProps) {
   const [expanded, setExpanded] = useState(false);
 
   if (entries.length === 0) return null;
@@ -57,7 +58,13 @@ export function ArchiveSection({ entries, onRemove }: ArchiveSectionProps) {
       {expanded ? (
         <Cards>
           {entries.map((entry) => (
-            <PrCard key={entry.key} entry={entry} onRemove={onRemove} />
+            <PrCard
+              key={entry.key}
+              entry={entry}
+              onRemove={onRemove}
+              onArchive={onArchive}
+              archived
+            />
           ))}
         </Cards>
       ) : null}

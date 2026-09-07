@@ -7,7 +7,9 @@ import { tokens } from './theme';
 export type BoardProps = {
   columns: Record<ColumnId, PrEntry[]>;
   onRemove: (key: PrKey) => void;
+  onArchive: (key: PrKey) => void;
   flashedKey?: PrKey | null;
+  selectedKey?: PrKey | null;
 };
 
 const Wrapper = styled.div`
@@ -29,7 +31,13 @@ const Columns = styled.div`
 
 const ORDER: ColumnId[] = ['waiting', 'needsAction', 'ready'];
 
-export function Board({ columns, onRemove, flashedKey = null }: BoardProps) {
+export function Board({
+  columns,
+  onRemove,
+  onArchive,
+  flashedKey = null,
+  selectedKey = null,
+}: BoardProps) {
   return (
     <Wrapper>
       <Columns>
@@ -39,11 +47,13 @@ export function Board({ columns, onRemove, flashedKey = null }: BoardProps) {
             id={id}
             entries={columns[id]}
             onRemove={onRemove}
+            onArchive={onArchive}
             flashedKey={flashedKey}
+            selectedKey={selectedKey}
           />
         ))}
       </Columns>
-      <ArchiveSection entries={columns.archive} onRemove={onRemove} />
+      <ArchiveSection entries={columns.archive} onRemove={onRemove} onArchive={onArchive} />
     </Wrapper>
   );
 }

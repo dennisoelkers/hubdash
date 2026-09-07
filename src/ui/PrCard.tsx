@@ -7,7 +7,10 @@ import { toneColor, tokens } from './theme';
 export type PrCardProps = {
   entry: PrEntry;
   onRemove: (key: PrKey) => void;
+  onArchive: (key: PrKey) => void;
   flashed?: boolean;
+  archived?: boolean;
+  selected?: boolean;
 };
 
 const Card = styled.article`
@@ -33,6 +36,10 @@ const Card = styled.article`
 
   &[data-flashed='true'] {
     outline: 2px solid ${tokens.color.accent};
+  }
+
+  &[data-selected='true'] {
+    background: ${tokens.color.accent}1a;
   }
 
   &:hover button[data-remove='true'] {
@@ -92,6 +99,27 @@ const ErrorText = styled.p`
   color: ${tokens.color.bad};
 `;
 
+const Spacer = styled.span`
+  flex: 1;
+`;
+
+const ArchiveButton = styled.button`
+  padding: ${tokens.space(1)} ${tokens.space(2)};
+  background: none;
+  border: 1px solid ${tokens.color.border};
+  border-radius: ${tokens.radius};
+  color: ${tokens.color.textMuted};
+  font-family: ${tokens.font.body};
+  font-size: 12px;
+  cursor: pointer;
+  flex-shrink: 0;
+
+  &:hover {
+    color: ${tokens.color.text};
+    border-color: ${tokens.color.accent};
+  }
+`;
+
 const RemoveButton = styled.button`
   position: absolute;
   top: ${tokens.space(1)};
@@ -114,7 +142,14 @@ const RemoveButton = styled.button`
   }
 `;
 
-export function PrCard({ entry, onRemove, flashed = false }: PrCardProps) {
+export function PrCard({
+  entry,
+  onRemove,
+  onArchive,
+  flashed = false,
+  archived = false,
+  selected = false,
+}: PrCardProps) {
   const cardRef = useRef<HTMLElement | null>(null);
 
   // Spec §7.4: adding a PR that is already tracked scrolls the existing card
@@ -142,6 +177,7 @@ export function PrCard({ entry, onRemove, flashed = false }: PrCardProps) {
       data-status={entry.status}
       data-draft={isDraft ? 'true' : 'false'}
       data-flashed={flashed ? 'true' : 'false'}
+      data-selected={selected ? 'true' : 'false'}
     >
       <RemoveButton
         data-remove="true"
@@ -159,6 +195,12 @@ export function PrCard({ entry, onRemove, flashed = false }: PrCardProps) {
             {entry.pr.title}
           </TitleLink>
         ) : null}
+        <Spacer />
+        {archived ? null : (
+          <ArchiveButton type="button" onClick={() => onArchive(entry.key)}>
+            Archive
+          </ArchiveButton>
+        )}
       </Header>
 
       <Meta>

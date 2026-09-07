@@ -14,7 +14,9 @@ export type ColumnProps = {
   id: ColumnId;
   entries: PrEntry[];
   onRemove: (key: PrKey) => void;
+  onArchive: (key: PrKey) => void;
   flashedKey?: PrKey | null;
+  selectedKey?: PrKey | null;
 };
 
 const Wrapper = styled.section`
@@ -66,7 +68,14 @@ function isDraft(entry: PrEntry): boolean {
   return entry.status === 'ok' && entry.pr.isDraft;
 }
 
-export function Column({ id, entries, onRemove, flashedKey = null }: ColumnProps) {
+export function Column({
+  id,
+  entries,
+  onRemove,
+  onArchive,
+  flashedKey = null,
+  selectedKey = null,
+}: ColumnProps) {
   // sort.ts has already put drafts last, so the first draft marks the boundary.
   const firstDraftIndex = entries.findIndex(isDraft);
   const showDivider = id === 'needsAction' && firstDraftIndex > 0;
@@ -86,7 +95,13 @@ export function Column({ id, entries, onRemove, flashedKey = null }: ColumnProps
               {showDivider && index === firstDraftIndex ? (
                 <DraftDivider data-testid="draft-divider" />
               ) : null}
-              <PrCard entry={entry} onRemove={onRemove} flashed={entry.key === flashedKey} />
+              <PrCard
+                entry={entry}
+                onRemove={onRemove}
+                onArchive={onArchive}
+                flashed={entry.key === flashedKey}
+                selected={entry.key === selectedKey}
+              />
             </div>
           ))}
         </Cards>
