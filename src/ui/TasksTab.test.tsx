@@ -1,4 +1,5 @@
 import { fireEvent, render, screen } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 import type { IssueEntry, PrEntry, PrKey, TrackedTask } from '../types';
 import { TasksTab } from './TasksTab';
@@ -12,9 +13,11 @@ describe('TasksTab — empty state', () => {
     render(
       <TasksTab
         tasks={[]}
+        archivedKeys={[]}
         entries={new Map()}
         flashedKey={null}
         onRemoveTask={() => {}}
+        onArchive={() => {}}
         onReorder={() => {}}
       />,
     );
@@ -27,9 +30,11 @@ describe('TasksTab — rendering', () => {
     render(
       <TasksTab
         tasks={[task(1), task(2), task(3)]}
+        archivedKeys={[]}
         entries={new Map<PrKey, PrEntry | IssueEntry>()}
         flashedKey={null}
         onRemoveTask={() => {}}
+        onArchive={() => {}}
         onReorder={() => {}}
       />,
     );
@@ -46,9 +51,11 @@ describe('TasksTab — rendering', () => {
     render(
       <TasksTab
         tasks={[task(1)]}
+        archivedKeys={[]}
         entries={new Map<PrKey, PrEntry | IssueEntry>()}
         flashedKey={null}
         onRemoveTask={onRemoveTask}
+        onArchive={() => {}}
         onReorder={() => {}}
       />,
     );
@@ -62,9 +69,11 @@ describe('TasksTab — reordering', () => {
     render(
       <TasksTab
         tasks={[task(1), task(2), task(3)]}
+        archivedKeys={[]}
         entries={new Map<PrKey, PrEntry | IssueEntry>()}
         flashedKey={null}
         onRemoveTask={() => {}}
+        onArchive={() => {}}
         onReorder={(from, to) => {
           expect(from).toBe(0);
           expect(to).toBe(2);
@@ -85,9 +94,11 @@ describe('TasksTab — reordering', () => {
     render(
       <TasksTab
         tasks={[task(1), task(2)]}
+        archivedKeys={[]}
         entries={new Map<PrKey, PrEntry | IssueEntry>()}
         flashedKey={null}
         onRemoveTask={() => {}}
+        onArchive={() => {}}
         onReorder={onReorder}
       />,
     );
@@ -97,5 +108,57 @@ describe('TasksTab — reordering', () => {
     fireEvent.dragStart(first);
     fireEvent.drop(first);
     expect(onReorder).not.toHaveBeenCalled();
+  });
+});
+
+describe('TasksTab — archiving', () => {
+  it('renders only non-archived tasks in the main list', () => {
+    render(
+      <TasksTab
+        tasks={[task(1), task(2)]}
+        archivedKeys={['a/a#1']}
+        entries={new Map<PrKey, PrEntry | IssueEntry>()}
+        flashedKey={null}
+        onRemoveTask={() => {}}
+        onArchive={() => {}}
+        onReorder={() => {}}
+      />,
+    );
+    expect(screen.getAllByTestId('task-row')).toHaveLength(1);
+    expect(screen.getByText('#2')).toBeInTheDocument();
+  });
+
+  it('shows an archived task inside the collapsed archive section', async () => {
+    render(
+      <TasksTab
+        tasks={[task(1)]}
+        archivedKeys={['a/a#1']}
+        entries={new Map<PrKey, PrEntry | IssueEntry>()}
+        flashedKey={null}
+        onRemoveTask={() => {}}
+        onArchive={() => {}}
+        onReorder={() => {}}
+      />,
+    );
+    expect(screen.queryByTestId('task-row')).not.toBeInTheDocument();
+    await userEvent.click(screen.getByRole('button', { name: /archive/i }));
+    expect(screen.getByTestId('task-row')).toBeInTheDocument();
+  });
+
+  it('calls onArchive with the right key from the main list', async () => {
+    const onArchive = vi.fn();
+    render(
+      <TasksTab
+        tasks={[task(1)]}
+        archivedKeys={[]}
+        entries={new Map<PrKey, PrEntry | IssueEntry>()}
+        flashedKey={null}
+        onRemoveTask={() => {}}
+        onArchive={onArchive}
+        onReorder={() => {}}
+      />,
+    );
+    await userEvent.click(screen.getByRole('button', { name: /^archive$/i }));
+    expect(onArchive).toHaveBeenCalledWith('a/a#1');
   });
 });

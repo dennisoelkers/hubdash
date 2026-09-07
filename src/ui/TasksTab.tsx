@@ -3,14 +3,18 @@ import styled from 'styled-components';
 import { prKey } from '../domain/prKey';
 import type { IssueEntry, PrEntry, PrKey, TrackedTask } from '../types';
 import { Empty } from './Empty';
+import { TaskArchiveSection } from './TaskArchiveSection';
 import { TaskRow } from './TaskRow';
 import { tokens } from './theme';
 
 export type TasksTabProps = {
   tasks: TrackedTask[];
+  archivedKeys: PrKey[];
   entries: Map<PrKey, PrEntry | IssueEntry>;
   flashedKey: PrKey | null;
+  selectedKey?: PrKey | null;
   onRemoveTask: (key: PrKey) => void;
+  onArchive: (key: PrKey) => void;
   onReorder: (fromIndex: number, toIndex: number) => void;
 };
 
@@ -21,7 +25,16 @@ const List = styled.div`
   padding: ${tokens.space(5)};
 `;
 
-export function TasksTab({ tasks, entries, flashedKey, onRemoveTask, onReorder }: TasksTabProps) {
+export function TasksTab({
+  tasks,
+  archivedKeys,
+  entries,
+  flashedKey,
+  selectedKey = null,
+  onRemoveTask,
+  onArchive,
+  onReorder,
+}: TasksTabProps) {
   // A ref, not state: the dragged index is read only inside the drop
   // handler it triggers synchronously, and does not need to drive a render.
   const dragIndex = useRef<number | null>(null);
@@ -32,9 +45,17 @@ export function TasksTab({ tasks, entries, flashedKey, onRemoveTask, onReorder }
     );
   }
 
+  const archivedKeySet = new Set(archivedKeys);
+  const active = tasks.filter(
+    (task) => !archivedKeySet.has(prKey(task.owner, task.repo, task.number)),
+  );
+  const archived = tasks.filter((task) =>
+    archivedKeySet.has(prKey(task.owner, task.repo, task.number)),
+  );
+
   return (
     <List>
-      {tasks.map((task, index) => {
+      {active.map((task, index) => {
         const key = prKey(task.owner, task.repo, task.number);
         return (
           <TaskRow
@@ -42,7 +63,9 @@ export function TasksTab({ tasks, entries, flashedKey, onRemoveTask, onReorder }
             task={task}
             entry={entries.get(key)}
             flashed={key === flashedKey}
+            selected={key === selectedKey}
             onRemove={() => onRemoveTask(key)}
+            onArchive={() => onArchive(key)}
             onDragStart={() => {
               dragIndex.current = index;
             }}
@@ -55,6 +78,12 @@ export function TasksTab({ tasks, entries, flashedKey, onRemoveTask, onReorder }
           />
         );
       })}
+      <TaskArchiveSection
+        tasks={archived}
+        entries={entries}
+        flashedKey={flashedKey}
+        onRemoveTask={onRemoveTask}
+      />
     </List>
   );
 }

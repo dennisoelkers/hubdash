@@ -1,14 +1,20 @@
 import { useState } from 'react';
 import styled from 'styled-components';
+import { prKey } from '../domain/prKey';
 import { taskStatusFor } from '../domain/taskStatus';
-import type { IssueEntry, PrEntry, TrackedTask } from '../types';
+import type { IssueEntry, PrEntry, PrKey, TrackedTask } from '../types';
 import { tokens } from './theme';
 
 export type TaskRowProps = {
   task: TrackedTask;
   entry: PrEntry | IssueEntry | undefined;
   flashed: boolean;
+  selected?: boolean;
+  // Suppresses the Archive button: archiving is one-way, so a row already
+  // inside `TaskArchiveSection` has nothing left to archive.
+  archived?: boolean;
   onRemove: () => void;
+  onArchive: (key: PrKey) => void;
   onDragStart: () => void;
   onDragOver: () => void;
   onDrop: () => void;
@@ -27,6 +33,10 @@ const Row = styled.div`
 
   &[data-flashed='true'] {
     outline: 2px solid ${tokens.color.accent};
+  }
+
+  &[data-selected='true'] {
+    background: ${tokens.color.accent}1a;
   }
 
   &[data-dragging='true'] {
@@ -69,6 +79,22 @@ const Status = styled.span<{ $tone: string }>`
   font-size: 13px;
   color: ${(props) => props.$tone};
   flex-shrink: 0;
+`;
+
+const ArchiveButton = styled.button`
+  background: none;
+  border: 1px solid ${tokens.color.border};
+  border-radius: ${tokens.radius};
+  padding: ${tokens.space(1)} ${tokens.space(2)};
+  color: ${tokens.color.textMuted};
+  cursor: pointer;
+  font-size: 12px;
+  flex-shrink: 0;
+
+  &:hover {
+    color: ${tokens.color.text};
+    border-color: ${tokens.color.accent};
+  }
 `;
 
 const RemoveButton = styled.button`
@@ -123,7 +149,18 @@ function nameWithOwnerOf(task: TrackedTask, entry: PrEntry | IssueEntry | undefi
   return `${task.owner}/${task.repo}`;
 }
 
-export function TaskRow({ task, entry, flashed, onRemove, onDragStart, onDragOver, onDrop }: TaskRowProps) {
+export function TaskRow({
+  task,
+  entry,
+  flashed,
+  selected = false,
+  archived = false,
+  onRemove,
+  onArchive,
+  onDragStart,
+  onDragOver,
+  onDrop,
+}: TaskRowProps) {
   const [dragging, setDragging] = useState(false);
   const status = statusView(entry);
 
@@ -131,6 +168,7 @@ export function TaskRow({ task, entry, flashed, onRemove, onDragStart, onDragOve
     <Row
       data-testid="task-row"
       data-flashed={flashed ? 'true' : 'false'}
+      data-selected={selected ? 'true' : 'false'}
       data-dragging={dragging ? 'true' : 'false'}
       draggable
       onDragStart={() => {
@@ -154,6 +192,11 @@ export function TaskRow({ task, entry, flashed, onRemove, onDragStart, onDragOve
       <Title>{titleOf(entry)}</Title>
       <Meta>{nameWithOwnerOf(task, entry)}</Meta>
       <Status $tone={status.tone}>{status.label}</Status>
+      {archived ? null : (
+        <ArchiveButton type="button" onClick={() => onArchive(prKey(task.owner, task.repo, task.number))}>
+          Archive
+        </ArchiveButton>
+      )}
       <RemoveButton type="button" aria-label={`Remove #${task.number} from tasks`} onClick={onRemove}>
         ✕
       </RemoveButton>

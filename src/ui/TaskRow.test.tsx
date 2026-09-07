@@ -39,6 +39,7 @@ describe('TaskRow — pending and errored', () => {
         entry={undefined}
         flashed={false}
         onRemove={noop}
+        onArchive={noop}
         onDragStart={noop}
         onDragOver={noop}
         onDrop={noop}
@@ -61,6 +62,7 @@ describe('TaskRow — pending and errored', () => {
         entry={entry}
         flashed={false}
         onRemove={noop}
+        onArchive={noop}
         onDragStart={noop}
         onDragOver={noop}
         onDrop={noop}
@@ -83,6 +85,7 @@ describe('TaskRow — a PR task', () => {
         entry={okEntry({ reviewDecision: 'APPROVED', ci: 'success' })}
         flashed={false}
         onRemove={noop}
+        onArchive={noop}
         onDragStart={noop}
         onDragOver={noop}
         onDrop={noop}
@@ -103,6 +106,7 @@ describe('TaskRow — a PR task', () => {
         entry={okEntry({ reviewDecision: 'CHANGES_REQUESTED', requestedReviewerCount: 0 })}
         flashed={false}
         onRemove={noop}
+        onArchive={noop}
         onDragStart={noop}
         onDragOver={noop}
         onDrop={noop}
@@ -118,6 +122,7 @@ describe('TaskRow — a PR task', () => {
         entry={okEntry({ lifecycle: 'MERGED' })}
         flashed={false}
         onRemove={noop}
+        onArchive={noop}
         onDragStart={noop}
         onDragOver={noop}
         onDrop={noop}
@@ -144,6 +149,7 @@ describe('TaskRow — an issue task', () => {
         entry={entry}
         flashed={false}
         onRemove={noop}
+        onArchive={noop}
         onDragStart={noop}
         onDragOver={noop}
         onDrop={noop}
@@ -170,6 +176,7 @@ describe('TaskRow — an issue task', () => {
         entry={entry}
         flashed={false}
         onRemove={noop}
+        onArchive={noop}
         onDragStart={noop}
         onDragOver={noop}
         onDrop={noop}
@@ -188,6 +195,7 @@ describe('TaskRow — remove and flash', () => {
         entry={undefined}
         flashed={false}
         onRemove={onRemove}
+        onArchive={noop}
         onDragStart={noop}
         onDragOver={noop}
         onDrop={noop}
@@ -204,11 +212,49 @@ describe('TaskRow — remove and flash', () => {
         entry={undefined}
         flashed
         onRemove={noop}
+        onArchive={noop}
         onDragStart={noop}
         onDragOver={noop}
         onDrop={noop}
       />,
     );
     expect(screen.getByTestId('task-row')).toHaveAttribute('data-flashed', 'true');
+  });
+});
+
+describe('TaskRow — archiving and selection', () => {
+  it('always shows an Archive button and calls onArchive with the key', async () => {
+    const onArchive = vi.fn();
+    render(
+      <TaskRow
+        task={prTask}
+        entry={undefined}
+        flashed={false}
+        onRemove={noop}
+        onArchive={onArchive}
+        onDragStart={noop}
+        onDragOver={noop}
+        onDrop={noop}
+      />,
+    );
+    await userEvent.click(screen.getByRole('button', { name: /^archive$/i }));
+    expect(onArchive).toHaveBeenCalledWith('example/example-server#4821');
+  });
+
+  it('marks itself selected via data-selected', () => {
+    render(
+      <TaskRow
+        task={prTask}
+        entry={undefined}
+        flashed={false}
+        onRemove={noop}
+        onArchive={noop}
+        onDragStart={noop}
+        onDragOver={noop}
+        onDrop={noop}
+        selected
+      />,
+    );
+    expect(screen.getByTestId('task-row')).toHaveAttribute('data-selected', 'true');
   });
 });
