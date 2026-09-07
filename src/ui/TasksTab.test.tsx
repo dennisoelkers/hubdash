@@ -21,7 +21,9 @@ describe('TasksTab — empty state', () => {
         onReorder={() => {}}
       />,
     );
-    expect(screen.getByText(/use the button, paste a url, or drop a link here/i)).toBeInTheDocument();
+    expect(
+      screen.getByText(/use the button, paste a url, or drop a link here/i),
+    ).toBeInTheDocument();
   });
 });
 

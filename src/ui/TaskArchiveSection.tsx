@@ -49,7 +49,12 @@ const Rows = styled.div`
  * Archiving is one-way (spec §2), so there is no un-archive control here,
  * only remove.
  */
-export function TaskArchiveSection({ tasks, entries, flashedKey, onRemoveTask }: TaskArchiveSectionProps) {
+export function TaskArchiveSection({
+  tasks,
+  entries,
+  flashedKey,
+  onRemoveTask,
+}: TaskArchiveSectionProps) {
   const [expanded, setExpanded] = useState(false);
 
   // Same gap this pattern already fixed for Backports: a duplicate-add flash

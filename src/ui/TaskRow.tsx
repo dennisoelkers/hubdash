@@ -145,7 +145,8 @@ function urlOf(task: TrackedTask, entry: PrEntry | IssueEntry | undefined): stri
 }
 
 function nameWithOwnerOf(task: TrackedTask, entry: PrEntry | IssueEntry | undefined): string {
-  if (entry?.status === 'ok') return 'pr' in entry ? entry.pr.nameWithOwner : entry.issue.nameWithOwner;
+  if (entry?.status === 'ok')
+    return 'pr' in entry ? entry.pr.nameWithOwner : entry.issue.nameWithOwner;
   return `${task.owner}/${task.repo}`;
 }
 
@@ -193,11 +194,18 @@ export function TaskRow({
       <Meta>{nameWithOwnerOf(task, entry)}</Meta>
       <Status $tone={status.tone}>{status.label}</Status>
       {archived ? null : (
-        <ArchiveButton type="button" onClick={() => onArchive(prKey(task.owner, task.repo, task.number))}>
+        <ArchiveButton
+          type="button"
+          onClick={() => onArchive(prKey(task.owner, task.repo, task.number))}
+        >
           Archive
         </ArchiveButton>
       )}
-      <RemoveButton type="button" aria-label={`Remove #${task.number} from tasks`} onClick={onRemove}>
+      <RemoveButton
+        type="button"
+        aria-label={`Remove #${task.number} from tasks`}
+        onClick={onRemove}
+      >
         ✕
       </RemoveButton>
     </Row>

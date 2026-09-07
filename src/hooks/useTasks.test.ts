@@ -31,7 +31,12 @@ describe('useTasks — add and remove', () => {
     const { result } = renderHook(() => useTasks({ storage, clock }));
 
     act(() => {
-      result.current.addTask({ kind: 'pr', owner: 'Example', repo: 'example-server', number: 4821 });
+      result.current.addTask({
+        kind: 'pr',
+        owner: 'Example',
+        repo: 'example-server',
+        number: 4821,
+      });
     });
 
     expect(result.current.tasks).toEqual([
@@ -63,7 +68,12 @@ describe('useTasks — add and remove', () => {
   it('removes a task by key', () => {
     const { result } = renderHook(() => useTasks({ storage: fakeStorage(), clock }));
     act(() => {
-      result.current.addTask({ kind: 'pr', owner: 'Example', repo: 'example-server', number: 4821 });
+      result.current.addTask({
+        kind: 'pr',
+        owner: 'Example',
+        repo: 'example-server',
+        number: 4821,
+      });
     });
     act(() => {
       result.current.removeTask('example/example-server#4821');
@@ -150,7 +160,12 @@ describe('useTasks — archiving', () => {
     const storage = fakeStorage();
     const { result } = renderHook(() => useTasks({ storage, clock }));
     act(() => {
-      result.current.addTask({ kind: 'pr', owner: 'Example', repo: 'example-server', number: 4821 });
+      result.current.addTask({
+        kind: 'pr',
+        owner: 'Example',
+        repo: 'example-server',
+        number: 4821,
+      });
     });
     act(() => {
       result.current.archiveTask('example/example-server#4821');
@@ -164,7 +179,12 @@ describe('useTasks — archiving', () => {
   it('is a no-op to archive an already-archived key', () => {
     const { result } = renderHook(() => useTasks({ storage: fakeStorage(), clock }));
     act(() => {
-      result.current.addTask({ kind: 'pr', owner: 'Example', repo: 'example-server', number: 4821 });
+      result.current.addTask({
+        kind: 'pr',
+        owner: 'Example',
+        repo: 'example-server',
+        number: 4821,
+      });
     });
     act(() => {
       result.current.archiveTask('example/example-server#4821');
@@ -176,7 +196,12 @@ describe('useTasks — archiving', () => {
   it('drops a stale archived key when the task is removed', () => {
     const { result } = renderHook(() => useTasks({ storage: fakeStorage(), clock }));
     act(() => {
-      result.current.addTask({ kind: 'pr', owner: 'Example', repo: 'example-server', number: 4821 });
+      result.current.addTask({
+        kind: 'pr',
+        owner: 'Example',
+        repo: 'example-server',
+        number: 4821,
+      });
     });
     act(() => {
       result.current.archiveTask('example/example-server#4821');

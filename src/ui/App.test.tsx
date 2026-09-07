@@ -1109,13 +1109,18 @@ describe('App — routing', () => {
 describe('App — the Tasks tab', () => {
   it('starts empty and shows the prompt', async () => {
     render(
-      <App deps={{ fetchImpl: vi.fn(), storage: fakeStorage({ [TOKEN_KEY]: storedToken }), clock, nowMs }} />,
+      <App
+        deps={{
+          fetchImpl: vi.fn(),
+          storage: fakeStorage({ [TOKEN_KEY]: storedToken }),
+          clock,
+          nowMs,
+        }}
+      />,
     );
     window.history.pushState(null, '', '/tasks');
     window.dispatchEvent(new PopStateEvent('popstate'));
-    expect(
-      await screen.findByText(/add an issue or pull request/i),
-    ).toBeInTheDocument();
+    expect(await screen.findByText(/add an issue or pull request/i)).toBeInTheDocument();
   });
 
   it('adds a PR task via the dialog and shows its live status after a poll', async () => {
@@ -1123,7 +1128,9 @@ describe('App — the Tasks tab', () => {
       pr0: prNode(4821, { reviewDecision: 'APPROVED' }),
     });
     render(
-      <App deps={{ fetchImpl, storage: fakeStorage({ [TOKEN_KEY]: storedToken }), clock, nowMs }} />,
+      <App
+        deps={{ fetchImpl, storage: fakeStorage({ [TOKEN_KEY]: storedToken }), clock, nowMs }}
+      />,
     );
     window.history.pushState(null, '', '/tasks');
     window.dispatchEvent(new PopStateEvent('popstate'));
@@ -1142,7 +1149,9 @@ describe('App — the Tasks tab', () => {
   it('adds an issue task and shows a waiting badge for an open issue', async () => {
     const fetchImpl = issueResponder({ pr0: issueNode(55) });
     render(
-      <App deps={{ fetchImpl, storage: fakeStorage({ [TOKEN_KEY]: storedToken }), clock, nowMs }} />,
+      <App
+        deps={{ fetchImpl, storage: fakeStorage({ [TOKEN_KEY]: storedToken }), clock, nowMs }}
+      />,
     );
     window.history.pushState(null, '', '/tasks');
     window.dispatchEvent(new PopStateEvent('popstate'));
@@ -1193,7 +1202,9 @@ describe('App — the Tasks tab', () => {
   it('flashes rather than duplicates when the same task is added twice', async () => {
     const fetchImpl = boardResponder({ pr0: prNode(4821) });
     render(
-      <App deps={{ fetchImpl, storage: fakeStorage({ [TOKEN_KEY]: storedToken }), clock, nowMs }} />,
+      <App
+        deps={{ fetchImpl, storage: fakeStorage({ [TOKEN_KEY]: storedToken }), clock, nowMs }}
+      />,
     );
     window.history.pushState(null, '', '/tasks');
     window.dispatchEvent(new PopStateEvent('popstate'));
@@ -1214,7 +1225,9 @@ describe('App — the Tasks tab', () => {
   it('shows the tab count excluding nothing — every tracked task counts', async () => {
     const fetchImpl = boardResponder({ pr0: prNode(4821, { state: 'MERGED' }) });
     render(
-      <App deps={{ fetchImpl, storage: fakeStorage({ [TOKEN_KEY]: storedToken }), clock, nowMs }} />,
+      <App
+        deps={{ fetchImpl, storage: fakeStorage({ [TOKEN_KEY]: storedToken }), clock, nowMs }}
+      />,
     );
     window.history.pushState(null, '', '/tasks');
     window.dispatchEvent(new PopStateEvent('popstate'));
@@ -1236,7 +1249,14 @@ describe('App — routing (Tasks)', () => {
   it('renders the Tasks tab for /tasks', async () => {
     window.history.pushState(null, '', '/tasks');
     render(
-      <App deps={{ fetchImpl: vi.fn(), storage: fakeStorage({ [TOKEN_KEY]: storedToken }), clock, nowMs }} />,
+      <App
+        deps={{
+          fetchImpl: vi.fn(),
+          storage: fakeStorage({ [TOKEN_KEY]: storedToken }),
+          clock,
+          nowMs,
+        }}
+      />,
     );
     expect(await screen.findByRole('tab', { name: /^tasks/i })).toHaveAttribute(
       'aria-selected',
@@ -1248,12 +1268,22 @@ describe('App — routing (Tasks)', () => {
 describe('App — keyboard shortcuts for tabs', () => {
   it('switches to Backports on b, Tasks on t, and Pull Requests on p', async () => {
     render(
-      <App deps={{ fetchImpl: vi.fn(), storage: fakeStorage({ [TOKEN_KEY]: storedToken }), clock, nowMs }} />,
+      <App
+        deps={{
+          fetchImpl: vi.fn(),
+          storage: fakeStorage({ [TOKEN_KEY]: storedToken }),
+          clock,
+          nowMs,
+        }}
+      />,
     );
     await screen.findByRole('tab', { name: /pull requests/i });
 
     await userEvent.keyboard('b');
-    expect(screen.getByRole('tab', { name: /backports/i })).toHaveAttribute('aria-selected', 'true');
+    expect(screen.getByRole('tab', { name: /backports/i })).toHaveAttribute(
+      'aria-selected',
+      'true',
+    );
 
     await userEvent.keyboard('t');
     expect(screen.getByRole('tab', { name: /^tasks/i })).toHaveAttribute('aria-selected', 'true');
@@ -1267,7 +1297,14 @@ describe('App — keyboard shortcuts for tabs', () => {
 
   it('does not switch tabs while typing the letter into a text field', async () => {
     render(
-      <App deps={{ fetchImpl: vi.fn(), storage: fakeStorage({ [TOKEN_KEY]: storedToken }), clock, nowMs }} />,
+      <App
+        deps={{
+          fetchImpl: vi.fn(),
+          storage: fakeStorage({ [TOKEN_KEY]: storedToken }),
+          clock,
+          nowMs,
+        }}
+      />,
     );
     await userEvent.click(await screen.findByRole('button', { name: /add pr/i }));
     await userEvent.type(screen.getByLabelText(/pull request url/i), 'b');
@@ -1280,7 +1317,14 @@ describe('App — keyboard shortcuts for tabs', () => {
 
   it('does not switch tabs from a keystroke on a dialog button while the dialog is open', async () => {
     render(
-      <App deps={{ fetchImpl: vi.fn(), storage: fakeStorage({ [TOKEN_KEY]: storedToken }), clock, nowMs }} />,
+      <App
+        deps={{
+          fetchImpl: vi.fn(),
+          storage: fakeStorage({ [TOKEN_KEY]: storedToken }),
+          clock,
+          nowMs,
+        }}
+      />,
     );
     await userEvent.click(await screen.findByRole('button', { name: /add pr/i }));
     screen.getByRole('button', { name: /cancel/i }).focus();
@@ -1296,7 +1340,14 @@ describe('App — keyboard shortcuts for tabs', () => {
 
   it('ignores the shortcut when a modifier key is held', async () => {
     render(
-      <App deps={{ fetchImpl: vi.fn(), storage: fakeStorage({ [TOKEN_KEY]: storedToken }), clock, nowMs }} />,
+      <App
+        deps={{
+          fetchImpl: vi.fn(),
+          storage: fakeStorage({ [TOKEN_KEY]: storedToken }),
+          clock,
+          nowMs,
+        }}
+      />,
     );
     await screen.findByRole('tab', { name: /pull requests/i });
 

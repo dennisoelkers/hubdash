@@ -78,7 +78,10 @@ describe('taskStatusFor — errored entries', () => {
       },
       message: 'This issue could not be loaded.',
     };
-    expect(taskStatusFor(entry)).toEqual({ kind: 'errored', message: 'This issue could not be loaded.' });
+    expect(taskStatusFor(entry)).toEqual({
+      kind: 'errored',
+      message: 'This issue could not be loaded.',
+    });
   });
 });
 

@@ -88,9 +88,5 @@ export function saveTasks(
   archivedKeys: PrKey[],
   storage?: Storage | null,
 ): void {
-  writeKey(
-    storage,
-    TASKS_KEY,
-    JSON.stringify({ version: CURRENT_VERSION, tasks, archivedKeys }),
-  );
+  writeKey(storage, TASKS_KEY, JSON.stringify({ version: CURRENT_VERSION, tasks, archivedKeys }));
 }

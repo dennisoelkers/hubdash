@@ -72,7 +72,7 @@ describe('moveSelection — left/right across columns', () => {
     });
   });
 
-  it('clamps the landing row to the target column\'s last item', () => {
+  it("clamps the landing row to the target column's last item", () => {
     expect(moveSelection(columns, { column: 'waiting', index: 2 }, 'right')).toEqual({
       column: 'needsAction',
       index: 0,
