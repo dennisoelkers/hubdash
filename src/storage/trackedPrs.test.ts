@@ -29,19 +29,33 @@ const pr: TrackedPr = {
 };
 
 describe('loadTrackedPrs', () => {
-  it('returns an empty list with no error when the key is absent', () => {
-    expect(loadTrackedPrs(fakeStorage())).toEqual({ prs: [], error: null });
+  it('returns an empty list and no archived keys when the key is absent', () => {
+    expect(loadTrackedPrs(fakeStorage())).toEqual({ prs: [], archivedKeys: [], error: null });
   });
 
-  it('round-trips a saved list', () => {
+  it('round-trips a saved list and its archived keys', () => {
     const storage = fakeStorage();
-    saveTrackedPrs([pr], storage);
-    expect(loadTrackedPrs(storage)).toEqual({ prs: [pr], error: null });
+    saveTrackedPrs([pr], ['example/example-server#4821'], storage);
+    expect(loadTrackedPrs(storage)).toEqual({
+      prs: [pr],
+      archivedKeys: ['example/example-server#4821'],
+      error: null,
+    });
+  });
+
+  it('loads a version-1 payload, defaulting archivedKeys to empty', () => {
+    const raw = JSON.stringify({ version: 1, prs: [pr] });
+    expect(loadTrackedPrs(fakeStorage({ [TRACKED_PRS_KEY]: raw }))).toEqual({
+      prs: [pr],
+      archivedKeys: [],
+      error: null,
+    });
   });
 
   it('reports an error and returns the default for non-JSON', () => {
     const result = loadTrackedPrs(fakeStorage({ [TRACKED_PRS_KEY]: 'not json{' }));
     expect(result.prs).toEqual([]);
+    expect(result.archivedKeys).toEqual([]);
     expect(result.error).toMatch(/could not be read/i);
   });
 
@@ -52,9 +66,6 @@ describe('loadTrackedPrs', () => {
   });
 
   it('does not blame the version when the envelope has none', () => {
-    // A payload with no version key at all is a wrong shape, not a future one.
-    // Reporting "unsupported version" sends the reader looking for a migration
-    // that was never the problem.
     const raw = JSON.stringify({ prs: [pr] });
     const error = loadTrackedPrs(fakeStorage({ [TRACKED_PRS_KEY]: raw })).error;
     expect(error).toBeTruthy();
@@ -62,17 +73,17 @@ describe('loadTrackedPrs', () => {
   });
 
   it('rejects an unknown version', () => {
-    const raw = JSON.stringify({ version: 99, prs: [pr] });
+    const raw = JSON.stringify({ version: 99, prs: [pr], archivedKeys: [] });
     expect(loadTrackedPrs(fakeStorage({ [TRACKED_PRS_KEY]: raw })).error).toMatch(/version/i);
   });
 
   it('rejects entries with missing or wrongly typed fields', () => {
     const bad = [
-      { owner: 'a', repo: 'b', number: 1 }, // no addedAt
-      { owner: 'a', repo: 'b', number: '1', addedAt: 'x' }, // number as string
-      { owner: '', repo: 'b', number: 1, addedAt: 'x' }, // empty owner
-      { owner: 'a', repo: 'b', number: 0, addedAt: 'x' }, // number not positive
-      { owner: 'a', repo: 'b', number: 1.5, addedAt: 'x' }, // not an integer
+      { owner: 'a', repo: 'b', number: 1 },
+      { owner: 'a', repo: 'b', number: '1', addedAt: 'x' },
+      { owner: '', repo: 'b', number: 1, addedAt: 'x' },
+      { owner: 'a', repo: 'b', number: 0, addedAt: 'x' },
+      { owner: 'a', repo: 'b', number: 1.5, addedAt: 'x' },
     ];
     for (const entry of bad) {
       const raw = JSON.stringify({ version: 1, prs: [entry] });
@@ -82,6 +93,13 @@ describe('loadTrackedPrs', () => {
     }
   });
 
+  it('rejects a version-2 payload whose archivedKeys is not a string array', () => {
+    const raw = JSON.stringify({ version: 2, prs: [pr], archivedKeys: [1, 2] });
+    const result = loadTrackedPrs(fakeStorage({ [TRACKED_PRS_KEY]: raw }));
+    expect(result.prs).toEqual([]);
+    expect(result.error).toBeTruthy();
+  });
+
   it('preserves an unusable value under the corrupt key so nothing is lost', () => {
     const storage = fakeStorage({ [TRACKED_PRS_KEY]: 'not json{' });
     loadTrackedPrs(storage);
@@ -89,21 +107,22 @@ describe('loadTrackedPrs', () => {
   });
 
   it('never throws when storage itself is unavailable', () => {
-    expect(loadTrackedPrs(null)).toEqual({ prs: [], error: null });
+    expect(loadTrackedPrs(null)).toEqual({ prs: [], archivedKeys: [], error: null });
   });
 });
 
 describe('saveTrackedPrs', () => {
-  it('writes a versioned envelope', () => {
+  it('writes a versioned envelope with both fields', () => {
     const storage = fakeStorage();
-    saveTrackedPrs([pr], storage);
+    saveTrackedPrs([pr], ['example/example-server#4821'], storage);
     expect(JSON.parse(storage.getItem(TRACKED_PRS_KEY) ?? '')).toEqual({
-      version: 1,
+      version: 2,
       prs: [pr],
+      archivedKeys: ['example/example-server#4821'],
     });
   });
 
   it('never throws when storage is unavailable', () => {
-    expect(() => saveTrackedPrs([pr], null)).not.toThrow();
+    expect(() => saveTrackedPrs([pr], [], null)).not.toThrow();
   });
 });
